@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<system>
+    <!-- Phase 4: Full Synrc Hypervision (OS.1): Tyn + BEAM + Alpine Driver VM -->
+
+    <memory_region name="console_ring" size="0x4000" page_size="0x1000" />
+    <memory_region name="monitor_ring" size="0x4000" page_size="0x1000" />
+    <memory_region name="sddf_net_ring" size="0x10000" page_size="0x1000" />
+    <memory_region name="guest_ram" size="0x20000000" page_size="0x1000" />
+
+    <protection_domain name="console" priority="254">
+        <program_image path="console.elf" />
+        <map mr="console_ring" vaddr="0x10000000" perms="rw" cached="true" />
+    </protection_domain>
+
+    <protection_domain name="audit_monitor" priority="200">
+        <program_image path="monitor.elf" />
+        <map mr="monitor_ring" vaddr="0x10000000" perms="rw" cached="true" />
+    </protection_domain>
+
+    <protection_domain name="tyn" priority="220">
+        <program_image path="tyn.elf" />
+        <map mr="console_ring" vaddr="0x10000000" perms="rw" cached="true" />
+        <map mr="monitor_ring" vaddr="0x20000000" perms="rw" cached="true" />
+        <map mr="sddf_net_ring" vaddr="0x30000000" perms="rw" cached="true" />
+    </protection_domain>
+
+    <protection_domain name="vmm" priority="180">
+        <program_image path="vmm.elf" />
+        <map mr="guest_ram" vaddr="0x40000000" perms="rw" cached="true" />
+        <map mr="sddf_net_ring" vaddr="0x30000000" perms="rw" cached="true" />
+    </protection_domain>
+
+    <channel><end pd="tyn" id="1" /><end pd="console" id="1" /></channel>
+    <channel><end pd="tyn" id="2" /><end pd="audit_monitor" id="1" /></channel>
+    <channel><end pd="tyn" id="3" /><end pd="vmm" id="1" /></channel>
+</system>

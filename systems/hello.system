@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<system>
+    <!-- Phase 0 / Phase 1 Single Protection Domain Bring-Up -->
+    <protection_domain name="hello" priority="254">
+        <program_image path="hello.elf" />
+    </protection_domain>
+</system>

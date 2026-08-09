@@ -51,7 +51,7 @@ _start:
     b       2b
 
 3:  /* Jump to C */
-    bl      hv_main
+    bl      init
 
     /* Should never return */
 4:  wfe

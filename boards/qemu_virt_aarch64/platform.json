@@ -1,0 +1,19 @@
+{
+  "name": "qemu_virt_aarch64",
+  "arch": "aarch64",
+  "memory": {
+    "base": "0x40000000",
+    "size": "0x40000000"
+  },
+  "devices": {
+    "uart": {
+      "base": "0x09000000",
+      "size": "0x1000",
+      "irq": 33
+    },
+    "gic": {
+      "distributor": "0x08000000",
+      "cpu": "0x08010000"
+    }
+  }
+}
