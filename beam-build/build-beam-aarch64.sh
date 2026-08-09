@@ -54,15 +54,18 @@ if [ -n "$CFG_GUESS" ] && [ -n "$CFG_SUB" ]; then
         cp -f "$CFG_GUESS" "$d/config.guess"
         cp -f "$CFG_SUB"   "$d/config.sub"
     done < <(find . -name 'configure' -not -path './.git/*')
-fi
-
-# Patch: apply bare-metal modifications (tty_sl mock, skip fork)
-echo "[build-beam-aarch64] Applying bare-metal patch..."
-if ! git -C "$BUILD_DIR/otp" apply --reverse --check "$REPO_ROOT/third_party/tyn/src/otp-baremetal.patch" 2>/dev/null; then
-    git -C "$BUILD_DIR/otp" apply "$REPO_ROOT/third_party/tyn/src/otp-baremetal.patch" || echo "[build-beam-aarch64] Patch already applied or failed."
-else
-    echo "[build-beam-aarch64] Patch already applied."
-fi
+# Patch: apply bare-metal modifications
+echo "[build-beam-aarch64] Applying bare-metal patches from ./patches/..."
+for patch in "$REPO_ROOT"/patches/*.patch; do
+    if [ -f "$patch" ]; then
+        if ! git -C "$BUILD_DIR/otp" apply --reverse --check "$patch" 2>/dev/null; then
+            echo "[build-beam-aarch64] Applying $patch..."
+            git -C "$BUILD_DIR/otp" apply "$patch" || echo "[build-beam-aarch64] Failed to apply $patch."
+        else
+            echo "[build-beam-aarch64] Patch $patch already applied."
+        fi
+    fi
+done
 
 # Disable optional sub-library configure scripts that are not needed for
 # the emulator and fail on cross-compilation (snmp, megaco, corba, etc).
