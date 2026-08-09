@@ -60,8 +60,9 @@ typedef struct {
 // -------------------------------------------------------------------------
 static char *beam_argv[] = {
     "beam",
-    "+MMscs", "32",
-    "-c", "false",
+    "-A", "0",       // no async thread pool (clone returns EAGAIN)
+    "-K", "false",   // disable kernel poll (epoll init crashes on null fn ptr)
+    "-c", "false",   // disable time correction
     "--",
     "-root", "/otp",
     "-progname", "erl",
@@ -70,7 +71,20 @@ static char *beam_argv[] = {
     "-boot", "/otp/bin/start",
     0
 };
-static const int beam_argc = 14;
+static const int beam_argc = 17;
+
+// -------------------------------------------------------------------------
+// envp[] — BEAM's sys.c fatally exits without BINDIR/ROOTDIR/EMU
+// -------------------------------------------------------------------------
+static char *beam_envp[] = {
+    "BINDIR=/otp/bin",
+    "ROOTDIR=/otp",
+    "PROGNAME=erl",
+    "HOME=/",
+    "EMU=beam",
+    "ERL_CRASH_DUMP=/dev/null",
+    0
+};
 
 // -------------------------------------------------------------------------
 // Freestanding memory helpers (no libc)
@@ -98,28 +112,34 @@ static void tyn_memset(void *dst, int c, size_t n) {
 //   AT_NULL
 // -------------------------------------------------------------------------
 __attribute__((noreturn))
-static void elf_enter(uintptr_t entry, uintptr_t sp_base, int argc, char **argv) {
-    int total_words = 1 + (argc + 1) + 1 + 6; // argc, argv, envp, auxv
-    
+static void elf_enter(uintptr_t entry, uintptr_t sp_base,
+                      int argc, char **argv, char **envp) {
+    // count envp entries
+    int envc = 0;
+    if (envp) { while (envp[envc]) envc++; }
+
+    int total_words = 1 + (argc + 1) + (envc + 1) + 6; // argc, argv[], NULL, envp[], NULL, auxv
+
     // Put random_bytes at the very top
     uintptr_t random_ptr = (sp_base - 16) & ~(uintptr_t)15;
     uint8_t *random_bytes = (uint8_t *)random_ptr;
-    for (int i=0; i<16; i++) random_bytes[i] = i ^ 0xA5;
+    for (int i = 0; i < 16; i++) random_bytes[i] = (uint8_t)(i ^ 0xA5);
 
-    // Put args below random_bytes
-    uintptr_t aligned_sp = (random_ptr - (total_words * 8)) & ~(uintptr_t)15;
+    // Put stack frame below random_bytes
+    uintptr_t aligned_sp = (random_ptr - ((size_t)total_words * 8)) & ~(uintptr_t)15;
     uintptr_t *p = (uintptr_t *)aligned_sp;
-    
+
     // 1. argc
-    *p++ = argc;
-    // 2. argv
+    *p++ = (uintptr_t)argc;
+    // 2. argv[]
     for (int i = 0; i < argc; i++) *p++ = (uintptr_t)argv[i];
     *p++ = 0; // NULL terminator for argv
-    // 3. envp
+    // 3. envp[]
+    for (int i = 0; i < envc; i++) *p++ = (uintptr_t)envp[i];
     *p++ = 0; // NULL terminator for envp
     // 4. auxv
     *p++ = 25; // AT_RANDOM
-    *p++ = random_ptr; // point to our random bytes
+    *p++ = random_ptr;
     *p++ = 6;  // AT_PAGESZ
     *p++ = 4096;
     *p++ = 0;  // AT_NULL
@@ -251,5 +271,5 @@ void beam_loader_start(void) {
     uintptr_t sp = (BEAM_STACK_BASE + BEAM_STACK_SIZE) & ~(uintptr_t)15;
 
     microkit_dbg_puts("[tyn] ELF loader: jumping to BEAM entry point...\n");
-    elf_enter(entry, sp, beam_argc, beam_argv);
+    elf_enter(entry, sp, beam_argc, beam_argv, beam_envp);
 }

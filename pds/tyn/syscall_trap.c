@@ -122,13 +122,31 @@ void tyn_syscall_init(void) {
 // Syscall dispatcher
 // ---------------------------------------------------------------------------
 long tyn_syscall_dispatch(long sysno, long a1, long a2, long a3, long a4, long a5, long a6) {
-    (void)a4; (void)a5; (void)a6;
+    (void)a5; (void)a6;
     
     switch (sysno) {
 
         // ----------------------------------------------------------------
         // I/O
         // ----------------------------------------------------------------
+
+        case SYS_getcwd: {
+            char *buf = (char *)a1;
+            size_t size = (size_t)a2;
+            if (!buf || size < 2) return -34; // ERANGE
+            buf[0] = '/';
+            buf[1] = '\0';
+            return 1; // returns length including NUL
+        }
+
+        case SYS_chdir:
+        case SYS_fchdir:
+            return 0;
+
+        case SYS_statfs:
+        case SYS_fstatfs:
+            if (a2) tyn_memset((void *)a2, 0, 128);
+            return 0;
 
         case SYS_pipe2: {
             int *pipefd = (int *)a1;
@@ -160,10 +178,13 @@ long tyn_syscall_dispatch(long sysno, long a1, long a2, long a3, long a4, long a
                 const uint8_t *src = e->file->data + e->offset;
                 for (size_t i = 0; i < count; i++) buf[i] = (char)src[i];
                 e->offset += count;
+                microkit_dbg_puts("[tyn] SYS_read: read file\n");
                 return (long)count;
             }
-            return 0;
+            microkit_dbg_puts("[tyn] SYS_read: unknown fd\n");
+            return -9; // EBADF
         }
+
 
         case SYS_write: {
             int fd = (int)a1;
@@ -254,25 +275,53 @@ long tyn_syscall_dispatch(long sysno, long a1, long a2, long a3, long a4, long a
         }
 
         case SYS_fstat: {
-            // Return a minimal stat with the file size
             int fd = (int)a1;
             if (fd >= 3 && fd < FD_MAX && fd_table[fd].used) {
-                // struct stat is large; just zero the buffer and set st_size
                 uint8_t *st = (uint8_t *)a2;
-                if (!st) return -1;
-                // Zero 144 bytes (linux aarch64 stat)
-                for (int i = 0; i < 144; i++) st[i] = 0;
-                // st_size at offset 48 (aarch64 linux stat)
+                if (!st) return -14; // EFAULT
+                for (int i = 0; i < 128; i++) st[i] = 0;
+                
+                // st_mode at offset 16: set S_IFREG | 0644 = 0x81A4
+                st[16] = 0xA4; st[17] = 0x81;
+                // st_size at offset 48
                 size_t sz = fd_table[fd].file->size;
                 uint8_t *p = st + 48;
                 for (int i = 0; i < 8; i++) { p[i] = (uint8_t)(sz & 0xFF); sz >>= 8; }
+                
+                microkit_dbg_puts("[tyn] SYS_fstat: success\n");
                 return 0;
             }
-            return 0;
+            microkit_dbg_puts("[tyn] SYS_fstat: failure\n");
+            return -9; // EBADF
         }
 
         case SYS_lstat:   // 1039 — unique on aarch64
             return 0;
+
+        case 79: { // SYS_fstatat / newfstatat (dirfd, path, stat, flags)
+            const char *path = (const char *)a2;
+            uint8_t *st = (uint8_t *)a3;
+            if (!st) return -14; // EFAULT
+            // zero the entire stat buffer (128 bytes)
+            for (int i = 0; i < 128; i++) st[i] = 0;
+            // st_mode at offset 16: set S_IFREG | 0644 = 0x81A4
+            st[16] = 0xA4; st[17] = 0x81;
+            // look up file size from VFS
+            const vfs_file_t *f = vfs_lookup(path);
+            if (f) {
+                // st_size at offset 48
+                size_t sz = f->size;
+                uint8_t *p = st + 48;
+                for (int i = 0; i < 8; i++) { p[i] = (uint8_t)(sz & 0xFF); sz >>= 8; }
+                // st_nlink=1 at offset 20
+                st[20] = 1;
+            } else {
+                // directory or unknown: return a plausible dir stat
+                st[16] = 0xED; st[17] = 0x41; // S_IFDIR|0755
+                st[20] = 2;
+            }
+            return 0;
+        }
 
         case SYS_faccessat:  // 48 — covers access() alias too
             return 0;
@@ -304,16 +353,28 @@ long tyn_syscall_dispatch(long sysno, long a1, long a2, long a3, long a4, long a
             return (long)heap_curr;
 
         case SYS_mmap: {
-            size_t size = (size_t)a2;
+            size_t size    = (size_t)a2;
+            int    flags   = (int)a4;
+            int    MAP_FIXED_FLAG = 0x10;
+
             uintptr_t aligned_size = (size + 0xFFF) & ~(uintptr_t)0xFFF;
+
+            // MAP_FIXED: ERTS commits pages within a previously reserved range.
+            if (flags & MAP_FIXED_FLAG) {
+                microkit_dbg_puts("[tyn] mmap(MAP_FIXED) returning requested address.\n");
+                return (long)(uintptr_t)a1;
+            }
+
             if (mmap_curr + aligned_size > 0xC8000000) {
                 microkit_dbg_puts("[tyn] SYS_mmap ENOMEM!\n");
                 return -12; // ENOMEM
             }
             uintptr_t addr = mmap_curr;
             mmap_curr += aligned_size;
+            microkit_dbg_puts("[tyn] mmap allocated new block.\n");
             return (long)addr;
         }
+
 
         case SYS_mprotect:
         case SYS_munmap:
@@ -443,12 +504,85 @@ long tyn_syscall_dispatch(long sysno, long a1, long a2, long a3, long a4, long a
         }
 
         // ----------------------------------------------------------------
+        // Socket family — stubs that return success/EAGAIN as appropriate
+        // ----------------------------------------------------------------
+        case SYS_socketpair: {
+            // BEAM uses socketpair(AF_UNIX, SOCK_STREAM, 0, fds) in spawn_init
+            // Give it two dev_null fds so spawn_init succeeds
+            int *fds = (int *)a4;  // on AArch64: a1=domain a2=type a3=proto a4=sv
+            if (!fds) return -22; // EINVAL
+            int fd0 = fd_alloc(&dev_null_file);
+            int fd1 = fd_alloc(&dev_null_file);
+            if (fd0 < 0 || fd1 < 0) return -24; // EMFILE
+            fds[0] = fd0;
+            fds[1] = fd1;
+            return 0;
+        }
+
+        case SYS_socket:
+            // Return a dev_null fd so callers don't get -1 and crash
+            return fd_alloc(&dev_null_file);
+
+        case SYS_bind:
+        case SYS_listen:
+        case SYS_connect:
+        case SYS_setsockopt:
+        case SYS_getsockopt:
+            return 0;
+
+        case SYS_accept:
+        case SYS_accept4:
+            return -11; // EAGAIN — no connections
+
+        case SYS_sendto:
+            return (long)a3; // pretend we sent all bytes
+
+        case SYS_recvfrom:
+            return -11; // EAGAIN — no data
+
+        // ----------------------------------------------------------------
+        // I/O multiplexing — return immediately (no fds ready)
+        // ----------------------------------------------------------------
+        case SYS_epoll_create1:
+            return fd_alloc(&dev_null_file);
+
+        case SYS_epoll_ctl:
+            return 0;
+
+        case SYS_epoll_wait:
+        case SYS_pselect6:
+            return 0; // 0 events ready
+
+        case SYS_eventfd2:
+            return fd_alloc(&dev_null_file);
+
+        case SYS_poll:
+            return 0; // 0 events
+
+        // ----------------------------------------------------------------
+        // Process management — no real fork/exec support
+        // ----------------------------------------------------------------
+        case SYS_clone:
+            return -11; // EAGAIN — cannot create child process
+
+        case SYS_wait4:
+        case SYS_waitid:
+            return -10; // ECHILD
+
+        case SYS_kill:
+            return 0;
+
+        case SYS_signalfd4:
+            return fd_alloc(&dev_null_file);
+
+        // ----------------------------------------------------------------
         // Exit
         // ----------------------------------------------------------------
         case SYS_exit:
         case SYS_exit_group:
             microkit_dbg_puts("[tyn] BEAM runtime process exited.\n");
             for (;;) {}
+
 
         default: {
             char dbg[32] = "[tyn] UNHANDLED SYSCALL: ";

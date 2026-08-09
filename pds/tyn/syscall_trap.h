@@ -41,6 +41,41 @@
 #define SYS_exit              93
 #define SYS_exit_group        94
 #define SYS_getrandom         278
+// Filesystem extras
+#define SYS_getcwd            17
+#define SYS_chdir             49
+#define SYS_fchdir            50
+#define SYS_statfs            43
+#define SYS_fstatfs           44
+// Socket family
+#define SYS_socket            198
+#define SYS_socketpair        199
+#define SYS_bind              200
+#define SYS_listen            201
+#define SYS_accept            202
+#define SYS_connect           203
+#define SYS_sendto            206
+#define SYS_recvfrom          207
+#define SYS_setsockopt        208
+#define SYS_getsockopt        209
+#define SYS_accept4           242
+// Process/signal extras
+#define SYS_wait4             260
+#define SYS_waitid            95
+#define SYS_kill              129
+#define SYS_signalfd4         74
+#define SYS_epoll_create1     20
+#define SYS_epoll_ctl         21
+#define SYS_epoll_wait        22
+#define SYS_epoll_pwait       22  // alias
+#define SYS_eventfd2          19
+#define SYS_poll              73
+#define SYS_ppoll             73  // alias
+#define SYS_select            1038
+#define SYS_pselect6          72
+
+void tyn_syscall_init(void);
+long tyn_syscall_dispatch(long sysno, long a1, long a2, long a3, long a4, long a5, long a6);
 
 void tyn_syscall_init(void);
 long tyn_syscall_dispatch(long sysno, long a1, long a2, long a3, long a4, long a5, long a6);
