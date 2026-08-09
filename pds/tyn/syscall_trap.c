@@ -174,9 +174,6 @@ long tyn_syscall_dispatch(long sysno, long a1, long a2, long a3, long a4, long a
             return 0;
 
         case SYS_ioctl: {
-            // debug print
-            microkit_dbg_puts("[tyn] SYS_ioctl req=");
-            char hex[16];
             int fd = (int)a1;
             long req = a2;
             if (fd == 0 || fd == 1 || fd == 2) {
@@ -221,8 +218,6 @@ long tyn_syscall_dispatch(long sysno, long a1, long a2, long a3, long a4, long a
             char *buf = (char *)a2;
             size_t count = (size_t)a3;
             if (fd == 0) {
-                static int read_count = 0;
-                if (read_count++ < 10) microkit_dbg_puts("[tyn] SYS_read(0)\n");
                 size_t c = console_ring_read_rx(console_ring, buf, count);
                 if (c == 0) return -11; // EAGAIN
                 return (long)c;
@@ -234,7 +229,6 @@ long tyn_syscall_dispatch(long sysno, long a1, long a2, long a3, long a4, long a
                 const uint8_t *src = e->file->data + e->offset;
                 for (size_t i = 0; i < count; i++) buf[i] = (char)src[i];
                 e->offset += count;
-                microkit_dbg_puts("[tyn] SYS_read: read file\n");
                 return (long)count;
             }
             microkit_dbg_puts("[tyn] SYS_read: unknown fd\n");
@@ -244,7 +238,7 @@ long tyn_syscall_dispatch(long sysno, long a1, long a2, long a3, long a4, long a
 
         case SYS_write: {
             int fd = (int)a1;
-            if (fd == 1 || fd == 2) {
+            if (fd == 0 || fd == 1 || fd == 2) {
                 const char *buf = (const char *)a2;
                 size_t len = (size_t)a3;
                 console_ring_write_tx(console_ring, buf, len);
@@ -259,7 +253,7 @@ long tyn_syscall_dispatch(long sysno, long a1, long a2, long a3, long a4, long a
 
         case 66: { // SYS_writev
             int fd = (int)a1;
-            if (fd == 1 || fd == 2) {
+            if (fd == 0 || fd == 1 || fd == 2) {
                 struct iovec {
                     void *iov_base;
                     size_t iov_len;
@@ -296,9 +290,6 @@ long tyn_syscall_dispatch(long sysno, long a1, long a2, long a3, long a4, long a
             if (streq(path, "/dev/null")) {
                 f = &dev_null_file;
             } else {
-                microkit_dbg_puts("[tyn] SYS_openat: ");
-                microkit_dbg_puts(path);
-                microkit_dbg_puts("\n");
                 f = vfs_lookup(path);
             }
             if (!f) return -2; // ENOENT
@@ -351,8 +342,6 @@ long tyn_syscall_dispatch(long sysno, long a1, long a2, long a3, long a4, long a
                     uint8_t *p = st + 48;
                     for (int i = 0; i < 8; i++) { p[i] = (uint8_t)(sz & 0xFF); sz >>= 8; }
                 }
-                
-                microkit_dbg_puts("[tyn] SYS_fstat: success\n");
                 return 0;
             }
             microkit_dbg_puts("[tyn] SYS_fstat: failure\n");
@@ -439,7 +428,6 @@ long tyn_syscall_dispatch(long sysno, long a1, long a2, long a3, long a4, long a
 
             // MAP_FIXED: ERTS commits pages within a previously reserved range.
             if (flags & MAP_FIXED_FLAG) {
-                microkit_dbg_puts("[tyn] mmap(MAP_FIXED) returning requested address.\n");
                 return (long)(uintptr_t)a1;
             }
 
@@ -449,7 +437,6 @@ long tyn_syscall_dispatch(long sysno, long a1, long a2, long a3, long a4, long a
             }
             uintptr_t addr = mmap_curr;
             mmap_curr += aligned_size;
-            microkit_dbg_puts("[tyn] mmap allocated new block.\n");
             return (long)addr;
         }
 
@@ -627,24 +614,31 @@ long tyn_syscall_dispatch(long sysno, long a1, long a2, long a3, long a4, long a
         case SYS_epoll_ctl:
             return 0;
 
-        case SYS_epoll_wait: {
-            static int epoll_count = 0;
-            if (epoll_count++ < 10) microkit_dbg_puts("[tyn] SYS_epoll_wait\n");
+        case SYS_epoll_wait:
             return 0;
-        }
 
         case SYS_pselect6: {
-            static int ps_count = 0;
-            if (ps_count++ < 10) microkit_dbg_puts("[tyn] SYS_pselect6\n");
             int nfds = (int)a1;
             uint8_t *readfds = (uint8_t *)a2;
+            uint8_t *writefds = (uint8_t *)a3;
             int ready = 0;
-            if (nfds > 0 && readfds) {
+            if (nfds > 0) {
                 int has_data = console_ring && (console_ring->rx_tail != console_ring->rx_head);
-                if ((readfds[0] & 1) && has_data) ready++;
-                for (int i = 0; i < (nfds + 7) / 8; i++) {
-                    if (i == 0 && (readfds[0] & 1) && has_data) readfds[0] = 1;
-                    else readfds[i] = 0;
+                for (int i = 0; i < nfds; i++) {
+                    int byte_idx = i / 8;
+                    int bit_mask = 1 << (i % 8);
+                    int r_ready = 0, w_ready = 0;
+                    
+                    if (readfds && (readfds[byte_idx] & bit_mask)) {
+                        if (i == 0 && has_data) r_ready = 1;
+                        else readfds[byte_idx] &= ~bit_mask;
+                    }
+                    if (writefds && (writefds[byte_idx] & bit_mask)) {
+                        if (i == 1 || i == 2) w_ready = 1;
+                        else writefds[byte_idx] &= ~bit_mask;
+                    }
+                    
+                    if (r_ready || w_ready) ready++;
                 }
             }
             return ready;
@@ -654,8 +648,6 @@ long tyn_syscall_dispatch(long sysno, long a1, long a2, long a3, long a4, long a
             return fd_alloc(&dev_null_file, 0);
 
         case SYS_poll: {
-            static int poll_count = 0;
-            if (poll_count++ < 10) microkit_dbg_puts("[tyn] SYS_poll\n");
             struct pollfd_ptr { int fd; short events; short revents; } *fds = (void *)a1;
             size_t nfds = (size_t)a2;
             int ready = 0;
@@ -663,7 +655,10 @@ long tyn_syscall_dispatch(long sysno, long a1, long a2, long a3, long a4, long a
                 int has_data = console_ring && (console_ring->rx_tail != console_ring->rx_head);
                 for (size_t i = 0; i < nfds; i++) {
                     if (fds[i].fd == 0 && has_data) {
-                        fds[i].revents = fds[i].events;
+                        fds[i].revents = fds[i].events; // POLLIN
+                        if (fds[i].revents) ready++;
+                    } else if (fds[i].fd == 1 || fds[i].fd == 2) {
+                        fds[i].revents = fds[i].events & 0x0004; // POLLOUT is 4 in Linux
                         if (fds[i].revents) ready++;
                     } else {
                         fds[i].revents = 0;

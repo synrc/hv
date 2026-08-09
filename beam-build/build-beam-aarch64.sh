@@ -56,14 +56,12 @@ if [ -n "$CFG_GUESS" ] && [ -n "$CFG_SUB" ]; then
     done < <(find . -name 'configure' -not -path './.git/*')
 fi
 
-# Patch: skip fork of erl_child_setup (unikernel has no fork/exec)
-DRIVER_C="erts/emulator/sys/unix/sys_drivers.c"
-if grep -q "TYN: skip fork" "$DRIVER_C" 2>/dev/null; then
-    echo "[build-beam-aarch64] fork patch already applied."
+# Patch: apply bare-metal modifications (tty_sl mock, skip fork)
+echo "[build-beam-aarch64] Applying bare-metal patch..."
+if ! git -C "$BUILD_DIR/otp" apply --reverse --check "$REPO_ROOT/third_party/tyn/src/otp-baremetal.patch" 2>/dev/null; then
+    git -C "$BUILD_DIR/otp" apply "$REPO_ROOT/third_party/tyn/src/otp-baremetal.patch" || echo "[build-beam-aarch64] Patch already applied or failed."
 else
-    echo "[build-beam-aarch64] Applying fork/exec patch..."
-    sed -i.bak 's/    i = fork();/    i = 1; \/* TYN: skip fork *\//' "$DRIVER_C"
-    sed -i.bak 's/close(fds\[1\]);/\/* TYN: keep pipe open *\//' "$DRIVER_C"
+    echo "[build-beam-aarch64] Patch already applied."
 fi
 
 # Disable optional sub-library configure scripts that are not needed for
