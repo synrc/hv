@@ -97,10 +97,10 @@
 The Erlang/OTP BEAM runtime provides robust concurrency, fault isolation, and soft real-time behaviour that
 make it attractive for high-availability systems, yet it traditionally depends on a large general-purpose
 operating system whose trusted computing base (TCB) undermines strong security and certification arguments.
-We present Tynse, a hybrid architecture that hosts an unmodified BEAM on the formally verified seL4
+We present Synrc Hypervision, a hybrid architecture that hosts an unmodified BEAM on the formally verified seL4
 microkernel while retaining practical device support through a minimal Alpine Linux guest.
 
-A purpose-built thin host (Tyn) implements only the small set of Linux-compatible system calls required
+A purpose-built thin host (Synrc) implements only the small set of Linux-compatible system calls required
 by a musl-linked OTP runtime and executes as an isolated seL4 protection domain under the Microkit framework.
 Device drivers that would otherwise enlarge the TCB are confined to an Alpine Linux virtual machine managed
 by a lightweight virtual-machine monitor; communication between the BEAM domain and the driver domain occurs
@@ -131,15 +131,15 @@ a full Linux guest under seL4 merely relocates the TCB problem. Conversely, pure
 approaches that eliminate the general-purpose OS often force substantial rewriting of
 application runtimes or sacrifice device-driver coverage.
 
-Tynse addresses this tension by combining three elements:
+Synrc Hypervision addresses this tension by combining three elements:
 
 \begin{itemize}
   \item the formally verified seL4 microkernel and its Microkit framework for static, capability-based system construction;
-  \item Tyn, a minimal host that supplies only the approximately fifty Linux-compatible system calls required by a musl-linked, unmodified OTP BEAM;
+  \item Synrc, a minimal host that supplies only the approximately fifty Linux-compatible system calls required by a musl-linked, unmodified OTP BEAM;
   \item a carefully confined Alpine Linux virtual machine that supplies real device drivers, communicating with the BEAM domain solely through seL4 Device Driver Framework (sDDF) shared-memory channels.
 \end{itemize}
 
-The resulting architecture keeps the TCB under the BEAM extremely small (seL4 + Tyn) while still permitting practical use of complex hardware. All isolation boundaries, scheduling parameters, and device ownership are fixed at image-construction time, yielding a static system amenable to analysis and aligned with selected families of NIST SP~800-53 controls.
+The resulting architecture keeps the TCB under the BEAM extremely small (seL4 + Synrc) while still permitting practical use of complex hardware. All isolation boundaries, scheduling parameters, and device ownership are fixed at image-construction time, yielding a static system amenable to analysis and aligned with selected families of NIST SP~800-53 controls.
 
 This paper presents the architecture in detail, describes the principal protection domains and their interactions, and outlines the compile-time configuration model that governs resource allocation and scheduling.
 
@@ -147,7 +147,7 @@ This paper presents the architecture in detail, describes the principal protecti
 \section{Architecture}
 \label{sec:architecture}
 
-Tynse is organised as a static collection of seL4 protection domains (PDs) whose memory regions, communication channels, interrupt bindings and scheduling contexts are declared in a Microkit system description and materialised at build time. No protection domain or channel can be created dynamically at runtime.
+Synrc Hypervision is organised as a static collection of seL4 protection domains (PDs) whose memory regions, communication channels, interrupt bindings and scheduling contexts are declared in a Microkit system description and materialised at build time. No protection domain or channel can be created dynamically at runtime.
 
 \subsection{Components and Links}
 \label{sec:components}
@@ -162,7 +162,7 @@ The principal components and the morphisms that connect them are summarised belo
 \midrule
 seL4               & Microkernel          & Isolation, capabilities, MCS scheduling, IRQ routing \\
 Microkit           & Framework            & Static system description $\to$ concrete capability layout \\
-Tyn                & Protection Domain    & Syscall trap surface and minimal host for BEAM \\
+Synrc                & Protection Domain    & Syscall trap surface and minimal host for BEAM \\
 BEAM / OTP         & Application runtime  & Erlang/Elixir processes, schedulers, supervision \\
 VMM (libvmm)       & Protection Domain    & Creates and manages the Alpine Linux guest \\
 Alpine Linux guest & Virtual Machine      & Real device drivers (network, block, \ldots) \\
@@ -180,10 +180,10 @@ Network PD         & Protection Domain    & Ethernet access (native or via Alpin
 The dominant data and control paths are:
 
 \begin{itemize}
-  \item \textbf{Network}: NIC $\to$ Alpine driver $\to$ UIO helper $\to$ sDDF ring $\to$ Tyn $\to$ BEAM \texttt{gen\_tcp}/\texttt{Bandit};
-  \item \textbf{Storage}: SSD/block device $\to$ Storage path $\to$ sDDF $\to$ Tyn $\to$ BEAM file or ETS/Mnesia;
-  \item \textbf{Monitoring}: Tyn, VMM and driver PDs $\to$ notification + shared metrics region $\to$ Monitor PD;
-  \item \textbf{Console}: UART/virtio-console owned exclusively by the Console PD exposed to Tyn.
+  \item \textbf{Network}: NIC $\to$ Alpine driver $\to$ UIO helper $\to$ sDDF ring $\to$ Synrc $\to$ BEAM \texttt{gen\_tcp}/\texttt{Bandit};
+  \item \textbf{Storage}: SSD/block device $\to$ Storage path $\to$ sDDF $\to$ Synrc $\to$ BEAM file or ETS/Mnesia;
+  \item \textbf{Monitoring}: Synrc, VMM and driver PDs $\to$ notification + shared metrics region $\to$ Monitor PD;
+  \item \textbf{Console}: UART/virtio-console owned exclusively by the Console PD exposed to Synrc.
 \end{itemize}
 
 All authority is expressed by seL4 capabilities granted at system construction. There is no ambient authority.
@@ -208,7 +208,7 @@ Scheduling follows the seL4 Mixed-Criticality Scheduling (MCS) model. Typical pr
 
 \begin{enumerate}
   \item Console PD,
-  \item Tyn PD (hosting BEAM),
+  \item Synrc PD (hosting BEAM),
   \item Monitor PD,
   \item VMM / Alpine driver VM,
   \item optional background domains.
@@ -235,13 +235,13 @@ libvmm is the lightweight virtual-machine monitor library used by Microkit. It r
   \item granting the guest only those device registers and IRQs that policy permits.
 \end{itemize}
 
-The VMM itself holds only the capabilities necessary to manage its single guest; it cannot map arbitrary host memory or interfere with Tyn or other native PDs.
+The VMM itself holds only the capabilities necessary to manage its single guest; it cannot map arbitrary host memory or interfere with Synrc or other native PDs.
 
 \subsubsection{Alpine}
 \label{sec:alpine}
 
 Alpine Linux (musl-based, minimal) is chosen as the guest operating system for three reasons:
-small footprint, binary compatibility with the musl-linked OTP that Tyn expects,
+small footprint, binary compatibility with the musl-linked OTP that Synrc expects,
 and straightforward packaging. A Buildroot- or minirootfs-derived image contains:
 
 \begin{itemize}
@@ -252,34 +252,34 @@ and straightforward packaging. A Buildroot- or minirootfs-derived image contains
 
 Only the devices assigned to the guest appear in its device tree; all other hardware remains invisible.
 
-\subsubsection{Tyn}
-\label{sec:tyn}
+\subsubsection{Synrc}
+\label{sec:synrc}
 
-Tyn executes as a sibling protection domain to the VMM, not inside the Linux guest.
+Synrc executes as a sibling protection domain to the VMM, not inside the Linux guest.
 It implements a deliberately narrow Linux-compatible system-call surface (approximately fifty calls)
 that a musl-linked OTP binary expects: memory management (\texttt{mmap}, \texttt{mprotect}, \ldots),
 threading and synchronisation (clone, futex family), time, basic file descriptors, and the in-memory
 VFS that holds the OTP release.
 
-Tyn never owns real device registers. All I/O is performed by mapping sDDF rings that are
+Synrc never owns real device registers. All I/O is performed by mapping sDDF rings that are
 filled by either native driver PDs or by the UIO helper running inside Alpine.
-Consequently the trusted computing base that sits directly under BEAM consists solely of seL4 and Tyn.
+Consequently the trusted computing base that sits directly under BEAM consists solely of seL4 and Synrc.
 
 \subsubsection{BEAM}
 \label{sec:beam}
 
 An unmodified (or minimally patched) musl-linked OTP release is embedded as a
-cpio or tar archive inside the Tyn protection domain. At start-up Tyn locates
+cpio or tar archive inside the Synrc protection domain. At start-up Synrc locates
 the archive, constructs the necessary environment, and transfers control to \texttt{beam.smp}.
 From that point the ordinary OTP boot sequence proceeds: schedulers are started,
 applications are loaded, and supervision trees become active. BEAM continues to
 manage its own processes, message passing and distribution; seL4 only guarantees
-the CPU budget and memory isolation of the enclosing Tyn domain.
+the CPU budget and memory isolation of the enclosing Synrc domain.
 
 \subsection{Monitor Protection Domain}
 \label{sec:monitor}
 
-The Monitor PD collects health and performance data from Tyn, the VMM and any native driver domains.
+The Monitor PD collects health and performance data from Synrc, the VMM and any native driver domains.
 Communication occurs through a combination of seL4 notifications and a shared metrics memory
 region whose layout is fixed at build time. The Monitor may:
 
@@ -295,10 +295,10 @@ When the compile-time flag \texttt{MONITOR=0} is supplied the entire domain is o
 \label{sec:console}
 
 The Console PD owns the platform UART (or a virtio-console device) exclusively.
-It provides a narrow, character-oriented interface to Tyn for early boot messages,
+It provides a narrow, character-oriented interface to Synrc for early boot messages,
 panic output and optional interactive debugging.
 Because the device registers reside only in the Console PD’s capability space,
-neither Tyn nor the Alpine guest can access them directly.
+neither Synrc nor the Alpine guest can access them directly.
 The domain can be compiled to a write-only sink for production images.
 
 \subsection{Storage Protection Domain}
@@ -308,12 +308,12 @@ Storage may be realised in two ways, selected at image-construction time:
 
 \begin{itemize}
   \item \textbf{Native sDDF block driver} --- a dedicated PD owns the block device registers
-        and IRQ and speaks the sDDF block protocol to Tyn;
+        and IRQ and speaks the sDDF block protocol to Synrc;
   \item \textbf{Alpine-mediated} --- the block device is passed through to the Linux guest;
         the UIO helper translates Linux block I/O into sDDF rings.
 \end{itemize}
 
-In both cases Tyn presents a simple block or file-system abstraction to BEAM.
+In both cases Synrc presents a simple block or file-system abstraction to BEAM.
 The choice is expressed by the \texttt{STORAGE} build flag and the corresponding
 entries in the Microkit system description. Device ownership is exclusive:
 a given controller is never mapped into more than one domain.
@@ -325,7 +325,7 @@ Analogously to storage, networking is provided either by a native sDDF Ethernet 
 The data path is identical in structure:
 
 \begin{center}
-NIC $\to$ (native PD or Alpine + UIO) $\to$ sDDF ring $\to$ Tyn $\to$ BEAM socket layer.
+NIC $\to$ (native PD or Alpine + UIO) $\to$ sDDF ring $\to$ Synrc $\to$ BEAM socket layer.
 \end{center}
 
 Compile-time selection (\texttt{NET=1}) determines which implementation is linked into the final image.
@@ -336,13 +336,13 @@ not perturb BEAM’s soft real-time behaviour.
 \subsection{NIST SP 800-53 Control Mapping}
 \label{sec:nist}
 
-Tynse’s static, capability-based design maps naturally onto several families of NIST SP~800-53 controls. The table below summarises the primary alignments. This is a design-time correspondence, not a formal certification claim.
+Synrc Hypervision’s static, capability-based design maps naturally onto several families of NIST SP~800-53 controls. The table below summarises the primary alignments. This is a design-time correspondence, not a formal certification claim.
 
 \begin{center}
 \noindent\makebox[\textwidth][c]{
 \begin{tabular}{p{6cm}p{3cm}p{8cm}}
 \toprule
-\textbf{Family} & \textbf{Example Controls} & \textbf{How Tynse addresses them} \\
+\textbf{Family} & \textbf{Example Controls} & \textbf{How Synrc Hypervision addresses them} \\
 \midrule
 \textbf{AC} Access Control
   & AC-3, AC-4, AC-6
@@ -366,7 +366,7 @@ Tynse’s static, capability-based design maps naturally onto several families o
 \addlinespace
 \textbf{CP} Contingency Planning
   & CP-9, CP-10
-  & BEAM supervision trees provide deterministic process-level recovery inside the Tyn domain; seL4 contains failures to the originating PD. \\
+  & BEAM supervision trees provide deterministic process-level recovery inside the Synrc domain; seL4 contains failures to the originating PD. \\
 \addlinespace
 \textbf{IA} Identification \& Authentication
   & IA-2, IA-5
@@ -374,7 +374,7 @@ Tynse’s static, capability-based design maps naturally onto several families o
 \addlinespace
 \textbf{SA} System \& Services Acquisition
   & SA-11, SA-15
-  & Small TCB, open design, reproducible builds, and clear separation of upstream components (seL4, Microkit, Tyn, Alpine). \\
+  & Small TCB, open design, reproducible builds, and clear separation of upstream components (seL4, Microkit, Synrc, Alpine). \\
 \bottomrule
 \end{tabular}
 }
@@ -391,7 +391,7 @@ microkernel with a dramatically reduced trusted computing base while still retai
 devices. The architecture achieves this by:
 
 \begin{itemize}
-  \item confining the BEAM to a minimal syscall-trap host (Tyn) that runs as an ordinary seL4 protection domain;
+  \item confining the BEAM to a minimal syscall-trap host (Synrc) that runs as an ordinary seL4 protection domain;
   \item isolating device drivers inside a capability-restricted Alpine Linux virtual machine (or native sDDF PDs);
   \item mediating all inter-component communication through static, capability-controlled sDDF channels;
   \item fixing scheduling parameters, core affinity and device ownership at image-construction time.
