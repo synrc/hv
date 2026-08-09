@@ -11,7 +11,7 @@ LD           = /opt/homebrew/bin/ld.lld
 MICROKIT     = $(MICROKIT_SDK)/bin/microkit
 
 BOARD_DIR    = $(MICROKIT_SDK)/board/$(BOARD)/$(CONFIG)
-INC_FLAGS    = -I$(BOARD_DIR)/include -Iinclude -Ipds/console -Ipds/tyn -Ithird_party/tyn/include
+INC_FLAGS    = -I$(BOARD_DIR)/include -Ipds/console -Ipds/tyn
 CFLAGS       = -target $(TARGET) -mgeneral-regs-only -ffreestanding -fno-builtin -nostdlib -Wall -Wextra -O2 $(INC_FLAGS)
 LDFLAGS      = -T $(BOARD_DIR)/lib/microkit.ld $(BOARD_DIR)/lib/libmicrokit.a
 

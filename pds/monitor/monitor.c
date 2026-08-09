@@ -11,6 +11,8 @@ void notified(microkit_channel ch) {
 }
 
 seL4_Bool fault(microkit_child child, microkit_msginfo msginfo, microkit_msginfo *reply_msginfo) {
+    (void)msginfo;
+    (void)reply_msginfo;
     microkit_dbg_puts("[monitor] CRITICAL: Tyn PD caused a fault!\n");
     // We could decode the msginfo to print the exact fault reason (e.g. instruction address, fault address).
     // Let's print the basic info.

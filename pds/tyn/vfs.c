@@ -140,7 +140,6 @@ static vfs_file_t vfs_dir_dummy = { .path = "DIR", .data = 0, .size = 0 };
 
 const vfs_file_t *vfs_lookup(const char *path) {
     if (!path) return NULL;
-    size_t plen = str_len(path);
     // Remove leading slash for matching against cpio paths
     const char *match_path = (path[0] == '/') ? path + 1 : path;
     size_t match_len = str_len(match_path);
@@ -177,7 +176,7 @@ int vfs_getdents(const char *dir_path, uint8_t *buf, size_t count, size_t *offse
     size_t written = 0;
     size_t vfs_idx = *offset_ptr;
     
-    while (vfs_idx < vfs_file_count) {
+    while (vfs_idx < (size_t)vfs_file_count) {
         const char *p = vfs_index[vfs_idx].path;
         
         int prefix_match = 1;
