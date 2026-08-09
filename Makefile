@@ -1,6 +1,6 @@
 # Synrc Hypervision (OS.1) Top-Level Makefile (Native Microkit SDK)
 
-MICROKIT_SDK ?= $(HOME)/microkit-sdk-2.3.0
+MICROKIT_SDK ?= third_party/microkit-sdk-2.3.0
 BOARD        ?= qemu_virt_aarch64
 CONFIG       ?= debug
 SYSTEM       ?= synrc-beam
