@@ -1,0 +1,140 @@
+diff --git a/erts/emulator/drivers/unix/ttsl_drv.c b/erts/emulator/drivers/unix/ttsl_drv.c
+index 2a508b0..d3cd913 100644
+--- a/erts/emulator/drivers/unix/ttsl_drv.c
++++ b/erts/emulator/drivers/unix/ttsl_drv.c
+@@ -26,6 +26,10 @@
+ #  include "config.h"
+ #endif
+ 
++#ifndef HAVE_TERMCAP
++#define HAVE_TERMCAP 1
++#endif
++
+ #include "erl_driver.h"
+ 
+ static int ttysl_init(void);
+@@ -1313,73 +1317,24 @@ static int cp_pos_to_col(int cp_pos)
+ 
+ static int start_termcap(void)
+ {
+-    int eres;
+-    size_t envsz = 1024;
+-    char *env = NULL;
+     char *c;
+-    int tres;
+-
++    
+     DEBUGLOG(("start_termcap: .."));
+ 
+     capbuf = driver_alloc(1024);
+-    if (!capbuf)
+-	goto false;
+-    eres = erl_drv_getenv("TERM", capbuf, &envsz);
+-    if (eres == 0)
+-	env = capbuf;
+-    else if (eres < 0) {
+-        DEBUGLOG(("start_termcap: failure in erl_drv_getenv(\"TERM\", ..) = %d\n", eres));
+-	goto false;
+-    } else /* if (eres > 1) */ {
+-      char *envbuf = driver_alloc(envsz);
+-      if (!envbuf)
+-	  goto false;
+-      while (1) {
+-	  char *newenvbuf;
+-	  eres = erl_drv_getenv("TERM", envbuf, &envsz);
+-	  if (eres == 0)
+-	      break;
+-	  newenvbuf = driver_realloc(envbuf, envsz);
+-          if (eres < 0 || !newenvbuf) {
+-              DEBUGLOG(("start_termcap: failure in erl_drv_getenv(\"TERM\", ..) = %d or realloc buf == %p\n", eres, newenvbuf));
+-	      env = newenvbuf ? newenvbuf : envbuf;
+-	      goto false;
+-	  }
+-	  envbuf = newenvbuf;
+-      }
+-      env = envbuf;
+-    }
+-    if ((tres = tgetent((char*)lbuf, env)) <= 0) {
+-        DEBUGLOG(("start_termcap: failure in tgetent(..) = %d\n", tres));
+-        goto false;
+-    }
+-    if (env != capbuf) {
+-	env = NULL;
+-	driver_free(env);
+-    }
++    if (!capbuf) return FALSE;
++
+     c = capbuf;
+     cols = tgetnum("co");
+-    if (cols <= 0)
+-	cols = DEF_WIDTH;
++    if (cols <= 0) cols = DEF_WIDTH;
+     xn = tgetflag("xn");
+     up = tgetstr("up", &c);
+-    if (!(down = tgetstr("do", &c)))
+-      down = "\n";
+-    if (!(left = tgetflag("bs") ? "\b" : tgetstr("bc", &c)))
+-      left = "\b";		/* Can't happen - but does on Solaris 2 */
++    if (!(down = tgetstr("do", &c))) down = "\n";
++    if (!(left = tgetflag("bs") ? "\b" : tgetstr("bc", &c))) left = "\b";
+     right = tgetstr("nd", &c);
+-    if (up && down && left && right) {
+-        DEBUGLOG(("start_termcap: successful start\n"));
+-        return TRUE;
+-    }
+-    DEBUGLOG(("start_termcap: failed start\n"));
+- false:
+-    if (env && env != capbuf)
+-	driver_free(env);
+-    if (capbuf)
+-	driver_free(capbuf);
+-    capbuf = NULL;
+-    return FALSE;
++    
++    DEBUGLOG(("start_termcap: successful start (baremetal mock)\n"));
++    return TRUE;
+ }
+ 
+ static int stop_termcap(void)
+@@ -1585,4 +1540,41 @@ static RETSIGTYPE winch(int sig)
+ {
+     cols_needs_update = TRUE;
+ }
++// --- BARE-METAL TERMCAP MOCK ---
++int tgetent(char* bp, char *name) {
++    return 1;
++}
++
++int tgetnum(char* cap) {
++    if (strcmp(cap, "co") == 0) return 80;
++    if (strcmp(cap, "li") == 0) return 24;
++    return -1;
++}
++
++int tgetflag(char* cap) {
++    return 0;
++}
++
++char *tgetstr(char* cap, char** buf) {
++    if (strcmp(cap, "up") == 0) return "\033[A";
++    if (strcmp(cap, "do") == 0) return "\033[B";
++    if (strcmp(cap, "nd") == 0) return "\033[C";
++    if (strcmp(cap, "bc") == 0 || strcmp(cap, "le") == 0) return "\b";
++    if (strcmp(cap, "ce") == 0) return "\033[K";
++    if (strcmp(cap, "cd") == 0) return "\033[J";
++    if (strcmp(cap, "cl") == 0) return "\033[H\033[2J";
++    if (strcmp(cap, "cr") == 0) return "\r";
++    if (strcmp(cap, "nl") == 0) return "\n";
++    if (strcmp(cap, "ho") == 0) return "\033[H";
++    return 0;
++}
++
++int tputs(char* cp, int affcnt, int (*outc)(int c)) {
++    if (!cp) return 0;
++    while (*cp) {
++        outc(*cp++);
++    }
++    return 0;
++}
++// -------------------------------
+ #endif /* HAVE_TERMCAP */

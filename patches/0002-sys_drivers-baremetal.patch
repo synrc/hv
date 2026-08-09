@@ -1,0 +1,22 @@
+diff --git a/erts/emulator/sys/unix/sys_drivers.c b/erts/emulator/sys/unix/sys_drivers.c
+index 834706d..170eb49 100644
+--- a/erts/emulator/sys/unix/sys_drivers.c
++++ b/erts/emulator/sys/unix/sys_drivers.c
+@@ -1711,7 +1711,7 @@ static ErlDrvData forker_start(ErlDrvPort port_num, char* name,
+ 
+     unbind = erts_sched_bind_atfork_prepare();
+ 
+-    i = fork();
++    i = 1; /* TYN: skip fork */
+ 
+     if (i == 0) {
+         /* The child */
+@@ -1745,7 +1745,7 @@ static ErlDrvData forker_start(ErlDrvPort port_num, char* name,
+ 
+     erts_free(ERTS_ALC_T_CS_PROG_PATH, child_setup_prog);
+ 
+-    close(fds[1]);
++    /* TYN: keep pipe open */
+ 
+     SET_NONBLOCKING(forker_fd);
+ 

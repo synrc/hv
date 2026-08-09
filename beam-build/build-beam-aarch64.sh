@@ -54,6 +54,8 @@ if [ -n "$CFG_GUESS" ] && [ -n "$CFG_SUB" ]; then
         cp -f "$CFG_GUESS" "$d/config.guess"
         cp -f "$CFG_SUB"   "$d/config.sub"
     done < <(find . -name 'configure' -not -path './.git/*')
+fi
+
 # Patch: apply bare-metal modifications
 echo "[build-beam-aarch64] Applying bare-metal patches from ./patches/..."
 for patch in "$REPO_ROOT"/patches/*.patch; do
