@@ -160,15 +160,15 @@ static void elf_enter(uintptr_t entry, uintptr_t sp_base,
 // ELF loader + launch
 // -------------------------------------------------------------------------
 void beam_loader_start(void) {
-    microkit_dbg_puts("[tyn] Transferring execution to real BEAM executable (third_party/tyn/src/beam.smp.elf)...\n");
+    microkit_dbg_puts("[synrc] Transferring execution to real BEAM executable (third_party/tyn/src/beam.smp.elf)...\n");
 
     const uint8_t *elf = BEAM_ELF_BASE;
 
     // Check ELF magic — if absent QEMU -device loader was not used
     if (elf[0] != ELF_MAGIC0 || elf[1] != ELF_MAGIC1 ||
         elf[2] != ELF_MAGIC2 || elf[3] != ELF_MAGIC3) {
-        microkit_dbg_puts("[tyn] ELF loader: no AArch64 ELF at 0x50000000\n");
-        microkit_dbg_puts("[tyn] Run with: make run (uses -device loader for beam.aarch64.elf)\n");
+        microkit_dbg_puts("[synrc] ELF loader: no AArch64 ELF at 0x50000000\n");
+        microkit_dbg_puts("[synrc] Run with: make run (uses -device loader for beam.aarch64.elf)\n");
         beam_main(beam_argc, beam_argv);
         return;
     }
@@ -176,11 +176,11 @@ void beam_loader_start(void) {
     const elf64_hdr_t *hdr = (const elf64_hdr_t *)elf;
 
     if (hdr->e_type != ET_EXEC || hdr->e_machine != EM_AARCH64) {
-        microkit_dbg_puts("[tyn] ELF loader: not an AArch64 ET_EXEC — wrong binary?\n");
+        microkit_dbg_puts("[synrc] ELF loader: not an AArch64 ET_EXEC — wrong binary?\n");
         return;
     }
 
-    microkit_dbg_puts("[tyn] ELF loader: mapping PT_LOAD segments...\n");
+    microkit_dbg_puts("[synrc] ELF loader: mapping PT_LOAD segments...\n");
 
     for (uint16_t i = 0; i < hdr->e_phnum; i++) {
         const elf64_phdr_t *ph = (const elf64_phdr_t *)
@@ -198,9 +198,9 @@ void beam_loader_start(void) {
         if (ph->p_vaddr == 0x400000) {
             uint32_t *probe = (uint32_t *)0x59a120;
             if (*probe == 0xd4000001) {
-                microkit_dbg_puts("[tyn] Probe at 0x59a120 IS 0xd4000001!\n");
+                microkit_dbg_puts("[synrc] Probe at 0x59a120 IS 0xd4000001!\n");
             } else {
-                microkit_dbg_puts("[tyn] Probe at 0x59a120 IS NOT 0xd4000001!\n");
+                microkit_dbg_puts("[synrc] Probe at 0x59a120 IS NOT 0xd4000001!\n");
             }
         }
 
@@ -237,14 +237,14 @@ void beam_loader_start(void) {
                     offset = (int64_t)t - (int64_t)addr;
                     imm26 = (offset >> 2) & 0x03FFFFFF;
                     *inst = 0x14000000 | imm26;
-                    
+
                     trampoline_index++;
                     patch_count++;
                 }
             }
             if (patch_count > 0) {
                 char msg[64];
-                microkit_dbg_puts("[tyn] Patched ");
+                microkit_dbg_puts("[synrc] Patched ");
                 // simple itoa
                 int n = patch_count;
                 int i = 0;
@@ -269,6 +269,6 @@ void beam_loader_start(void) {
     // Stack top aligned to 16 bytes per AArch64 ABI
     uintptr_t sp = (BEAM_STACK_BASE + BEAM_STACK_SIZE) & ~(uintptr_t)15;
 
-    microkit_dbg_puts("[tyn] ELF loader: jumping to BEAM entry point...\n");
+    microkit_dbg_puts("[synrc] ELF loader: jumping to BEAM entry point...\n");
     elf_enter(entry, sp, beam_argc, beam_argv, beam_envp);
 }

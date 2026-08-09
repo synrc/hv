@@ -70,7 +70,7 @@ void vfs_init(void) {
     // Check if cpio is present (QEMU may not have loaded it yet if beam_image is absent)
     if (cpio_base[0] != '0' || cpio_base[1] != '7' || cpio_base[2] != '0' ||
         cpio_base[3] != '7' || cpio_base[4] != '0' || cpio_base[5] != '1') {
-        microkit_dbg_puts("[tyn] VFS: no valid cpio at 0x54000000 (load via QEMU -device loader)\n");
+        microkit_dbg_puts("[synrc] VFS: no valid cpio at 0x54000000 (load via QEMU -device loader)\n");
         return;
     }
 
@@ -120,7 +120,7 @@ void vfs_init(void) {
     }
 
     // Print count
-    microkit_dbg_puts("[tyn] VFS: cpio parsed — ");
+    microkit_dbg_puts("[synrc] VFS: cpio parsed — ");
     // Print vfs_file_count as decimal
     char num[16];
     int n = vfs_file_count, pos = 0;

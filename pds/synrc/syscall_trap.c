@@ -122,7 +122,7 @@ static int fd_alloc(const vfs_file_t *f, const char *dir_path) {
 }
 
 void tyn_syscall_init(void) {
-    microkit_dbg_puts("[tyn] Tyn host trap dispatcher online (~50 musl syscall handlers ready)\n");
+    microkit_dbg_puts("[synrc] Tyn host trap dispatcher online (~50 musl syscall handlers ready)\n");
     for (int i = 0; i < FD_MAX; i++) {
         fd_table[i].file   = 0;
         fd_table[i].offset = 0;
@@ -135,7 +135,7 @@ void tyn_syscall_init(void) {
 // ---------------------------------------------------------------------------
 long tyn_syscall_dispatch(long sysno, long a1, long a2, long a3, long a4, long a5, long a6) {
     (void)a5; (void)a6;
-    
+
     switch (sysno) {
 
         // ----------------------------------------------------------------
@@ -231,7 +231,7 @@ long tyn_syscall_dispatch(long sysno, long a1, long a2, long a3, long a4, long a
                 e->offset += count;
                 return (long)count;
             }
-            microkit_dbg_puts("[tyn] SYS_read: unknown fd\n");
+            microkit_dbg_puts("[synrc] SYS_read: unknown fd\n");
             return -9; // EBADF
         }
 
@@ -328,7 +328,7 @@ long tyn_syscall_dispatch(long sysno, long a1, long a2, long a3, long a4, long a
                 uint8_t *st = (uint8_t *)a2;
                 if (!st) return -14; // EFAULT
                 for (int i = 0; i < 128; i++) st[i] = 0;
-                
+
                 if (streq(fd_table[fd].file->path, "DIR")) {
                     // st_mode at offset 16: set S_IFDIR | 0755 = 0x41ED
                     st[16] = 0xED; st[17] = 0x41;
@@ -344,7 +344,7 @@ long tyn_syscall_dispatch(long sysno, long a1, long a2, long a3, long a4, long a
                 }
                 return 0;
             }
-            microkit_dbg_puts("[tyn] SYS_fstat: failure\n");
+            microkit_dbg_puts("[synrc] SYS_fstat: failure\n");
             return -9; // EBADF
         }
 
@@ -357,7 +357,7 @@ long tyn_syscall_dispatch(long sysno, long a1, long a2, long a3, long a4, long a
             if (!st) return -14; // EFAULT
             // zero the entire stat buffer (128 bytes)
             for (int i = 0; i < 128; i++) st[i] = 0;
-            
+
             const vfs_file_t *f = vfs_lookup(path);
             if (f) {
                 if (streq(f->path, "DIR")) {
@@ -385,7 +385,7 @@ long tyn_syscall_dispatch(long sysno, long a1, long a2, long a3, long a4, long a
             int fd = (int)a1;
             uint8_t *buf = (uint8_t *)a2;
             size_t count = (size_t)a3;
-            
+
             if (fd >= 3 && fd < FD_MAX && fd_table[fd].used) {
                 if (fd_table[fd].dir_path[0] != '\0') {
                     int res = vfs_getdents(fd_table[fd].dir_path, buf, count, &fd_table[fd].offset);
@@ -432,7 +432,7 @@ long tyn_syscall_dispatch(long sysno, long a1, long a2, long a3, long a4, long a
             }
 
             if (mmap_curr + aligned_size > 0xC8000000) {
-                microkit_dbg_puts("[tyn] SYS_mmap ENOMEM!\n");
+                microkit_dbg_puts("[synrc] SYS_mmap ENOMEM!\n");
                 return -12; // ENOMEM
             }
             uintptr_t addr = mmap_curr;
@@ -628,7 +628,7 @@ long tyn_syscall_dispatch(long sysno, long a1, long a2, long a3, long a4, long a
                     int byte_idx = i / 8;
                     int bit_mask = 1 << (i % 8);
                     int r_ready = 0, w_ready = 0;
-                    
+
                     if (readfds && (readfds[byte_idx] & bit_mask)) {
                         if (i == 0 && has_data) r_ready = 1;
                         else readfds[byte_idx] &= ~bit_mask;
@@ -637,7 +637,7 @@ long tyn_syscall_dispatch(long sysno, long a1, long a2, long a3, long a4, long a
                         if (i == 1 || i == 2) w_ready = 1;
                         else writefds[byte_idx] &= ~bit_mask;
                     }
-                    
+
                     if (r_ready || w_ready) ready++;
                 }
             }
@@ -698,13 +698,13 @@ long tyn_syscall_dispatch(long sysno, long a1, long a2, long a3, long a4, long a
         // ----------------------------------------------------------------
         case SYS_exit:
         case SYS_exit_group:
-            microkit_dbg_puts("[tyn] BEAM runtime process exited.\n");
+            microkit_dbg_puts("[synrc] BEAM runtime process exited.\n");
             for (;;) {}
 
 
 
         default: {
-            char dbg[32] = "[tyn] UNHANDLED SYSCALL: ";
+            char dbg[32] = "[synrc] UNHANDLED SYSCALL: ";
             long n = sysno;
             int i = 0;
             char buf[16];

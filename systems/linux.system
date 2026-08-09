@@ -1,8 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <system>
-    <!-- Phase 3: VMM + Alpine Guest VM (no Tyn/BEAM) -->
+    <!-- Phase 3: VMM + Alpine Guest VM (no synrc/BEAM) -->
     <memory_region name="guest_ram" size="0x10000000" page_size="0x1000" />
-
     <protection_domain name="vmm" priority="180">
         <program_image path="vmm.elf" />
         <map mr="guest_ram" vaddr="0x40000000" perms="rw" cached="true" />

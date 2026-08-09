@@ -17,8 +17,5 @@ git clone --depth 1 https://github.com/au-ts/libvmm.git "${THIRD_PARTY_DIR}/libv
 echo "[2/3] Fetching au-ts/sddf..."
 git clone --depth 1 https://github.com/au-ts/sddf.git "${THIRD_PARTY_DIR}/sddf"
 
-echo "[3/3] Fetching tyn-os/kernel..."
-git clone --depth 1 https://github.com/tyn-os/kernel.git "${THIRD_PARTY_DIR}/tyn"
-
 echo "=== Third Party Dependencies Refetched Successfully ==="
 ls -la "${THIRD_PARTY_DIR}"

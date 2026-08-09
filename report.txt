@@ -48,19 +48,19 @@
 			-> CSpace: 'cnode_monitor'
 			-> Scheduling Context: 'sched_context_monitor'
 
-	- TCB: 'tcb_tyn'
+	- TCB: 'tcb_synrc'
 		* IP: 0x200000
 		* SP: 0xffffffe000
 		* IPC Buffer: 0xfffffff000
 		* Priority: 220
 		* CPU Affinity: 0
 		* Bound Objects:
-			-> CSpace: 'cnode_tyn_root'
-			-> VSpace: 'pud_tyn'
-			-> IPC Buffer: 'frame_ipcbuf_tyn'
+			-> CSpace: 'cnode_synrc_root'
+			-> VSpace: 'pud_synrc'
+			-> IPC Buffer: 'frame_ipcbuf_synrc'
 			-> Fault Endpoint: 'ep_fault_monitor'
-			-> Scheduling Context: 'sched_context_tyn'
-			-> Notification: 'ntfn_tyn'
+			-> Scheduling Context: 'sched_context_synrc'
+			-> Notification: 'ntfn_synrc'
 
 
 # CNode Details
@@ -78,7 +78,7 @@
 		* Slot: 4
 			-> Object: 'reply_audit_monitor'
 		* Slot: 11
-			-> Object: 'ntfn_tyn'
+			-> Object: 'ntfn_synrc'
 			-> Rights: Read, Write
 			-> Badge: 0x4
 
@@ -96,7 +96,7 @@
 		* Slot: 4
 			-> Object: 'reply_console'
 		* Slot: 11
-			-> Object: 'ntfn_tyn'
+			-> Object: 'ntfn_synrc'
 			-> Rights: Read, Write
 			-> Badge: 0x2
 		* Slot: 140
@@ -114,11 +114,11 @@
 		* Slot: 11
 			-> Object: 'tcb_audit_monitor'
 		* Slot: 12
-			-> Object: 'tcb_tyn'
+			-> Object: 'tcb_synrc'
 
-	- CNode: 'cnode_tyn'
+	- CNode: 'cnode_synrc'
 		* Slot: 1
-			-> Object: 'ntfn_tyn'
+			-> Object: 'ntfn_synrc'
 			-> Rights: Read, Write
 			-> Badge: 0x0
 		* Slot: 2
@@ -126,9 +126,9 @@
 			-> Rights: Read, Write, Grant
 			-> Badge: 0x3
 		* Slot: 3
-			-> Object: 'pud_tyn'
+			-> Object: 'pud_synrc'
 		* Slot: 4
-			-> Object: 'reply_tyn'
+			-> Object: 'reply_synrc'
 		* Slot: 11
 			-> Object: 'ntfn_console'
 			-> Rights: Read, Write
@@ -146,9 +146,9 @@
 		* Slot: 0
 			-> Object: 'cnode_console'
 
-	- CNode: 'cnode_tyn_root'
+	- CNode: 'cnode_synrc_root'
 		* Slot: 0
-			-> Object: 'cnode_tyn'
+			-> Object: 'cnode_synrc'
 
 
 # Architecture Specific Details
@@ -7902,11 +7902,11 @@
 	7745 - CNode: 'cnode_audit_monitor' @ 0x000060000000
 	7746 - CNode: 'cnode_console' @ 0x000060004000
 	7747 - CNode: 'cnode_monitor' @ 0x000060008000
-	7748 - CNode: 'cnode_tyn' @ 0x00006000c000
+	7748 - CNode: 'cnode_synrc' @ 0x00006000c000
 	7749 - PageTable: 'pud_audit_monitor' @ 0x00006046e000
 	7750 - PageTable: 'pud_console' @ 0x000060470000
 	7751 - PageTable: 'pud_monitor' @ 0x000060472000
-	7752 - PageTable: 'pud_tyn' @ 0x000060474000
+	7752 - PageTable: 'pud_synrc' @ 0x000060474000
 	7753 - Page(4 KiB): 'frame_audit_monitor_stack_000000000' @ 0x00006046d000
 	7754 - Page(4 KiB): 'frame_audit_monitor_stack_000000001' @ 0x000060476000
 	7755 - Page(4 KiB): 'frame_console_stack_000000000' @ 0x000060477000
@@ -7921,17 +7921,17 @@
 	7764 - Page(4 KiB): 'frame_elf_monitor_000000003' @ 0x000060480000
 	7765 - Page(4 KiB): 'frame_elf_monitor_000000004' @ 0x000060481000
 	7766 - Page(4 KiB): 'frame_elf_monitor_000000005' @ 0x000060482000
-	7767 - Page(4 KiB): 'frame_elf_tyn_000000000' @ 0x000060483000
-	7768 - Page(4 KiB): 'frame_elf_tyn_000000001' @ 0x000060484000
-	7769 - Page(4 KiB): 'frame_elf_tyn_000000002' @ 0x000060485000
-	7770 - Page(4 KiB): 'frame_elf_tyn_000000003' @ 0x000060486000
-	7771 - Page(4 KiB): 'frame_elf_tyn_000000004' @ 0x000060487000
-	7772 - Page(4 KiB): 'frame_elf_tyn_000000005' @ 0x000060488000
-	7773 - Page(4 KiB): 'frame_elf_tyn_000000006' @ 0x000060489000
+	7767 - Page(4 KiB): 'frame_elf_synrc_000000000' @ 0x000060483000
+	7768 - Page(4 KiB): 'frame_elf_synrc_000000001' @ 0x000060484000
+	7769 - Page(4 KiB): 'frame_elf_synrc_000000002' @ 0x000060485000
+	7770 - Page(4 KiB): 'frame_elf_synrc_000000003' @ 0x000060486000
+	7771 - Page(4 KiB): 'frame_elf_synrc_000000004' @ 0x000060487000
+	7772 - Page(4 KiB): 'frame_elf_synrc_000000005' @ 0x000060488000
+	7773 - Page(4 KiB): 'frame_elf_synrc_000000006' @ 0x000060489000
 	7774 - Page(4 KiB): 'frame_ipcbuf_audit_monitor' @ 0x00006048a000
 	7775 - Page(4 KiB): 'frame_ipcbuf_console' @ 0x00006048b000
 	7776 - Page(4 KiB): 'frame_ipcbuf_monitor' @ 0x00006048c000
-	7777 - Page(4 KiB): 'frame_ipcbuf_tyn' @ 0x00006048d000
+	7777 - Page(4 KiB): 'frame_ipcbuf_synrc' @ 0x00006048d000
 	7778 - Page(4 KiB): 'frame_monitor_stack' @ 0x00006048e000
 	7779 - Page(4 KiB): 'frame_mr_beam_heap_000000000' @ 0x00006048f000
 	7780 - Page(4 KiB): 'frame_mr_beam_heap_000000001' @ 0x000060490000
@@ -12293,19 +12293,19 @@
 	12136 - Page(4 KiB): 'frame_mr_monitor_ring_000000001' @ 0x0000a9594000
 	12137 - Page(4 KiB): 'frame_mr_monitor_ring_000000002' @ 0x0000a9595000
 	12138 - Page(4 KiB): 'frame_mr_monitor_ring_000000003' @ 0x0000a9596000
-	12139 - Page(4 KiB): 'frame_tyn_stack_000000000' @ 0x0000a9597000
-	12140 - Page(4 KiB): 'frame_tyn_stack_000000001' @ 0x0000a9598000
+	12139 - Page(4 KiB): 'frame_synrc_stack_000000000' @ 0x0000a9597000
+	12140 - Page(4 KiB): 'frame_synrc_stack_000000001' @ 0x0000a9598000
 	12141 - PageTable: 'pd_audit_monitor_vaddr_0x200000' @ 0x0000a9599000
 	12142 - PageTable: 'pd_audit_monitor_vaddr_0xffffe00000' @ 0x0000a959a000
 	12143 - PageTable: 'pd_console_vaddr_0x200000' @ 0x0000a959b000
 	12144 - PageTable: 'pd_console_vaddr_0xffffe00000' @ 0x0000a959c000
 	12145 - PageTable: 'pd_monitor_vaddr_0x200000' @ 0x0000a959d000
 	12146 - PageTable: 'pd_monitor_vaddr_0xffffe00000' @ 0x0000a959e000
-	12147 - PageTable: 'pd_tyn_vaddr_0x200000' @ 0x0000a959f000
-	12148 - PageTable: 'pd_tyn_vaddr_0x50000000' @ 0x0000a95a0000
-	12149 - PageTable: 'pd_tyn_vaddr_0x80000000' @ 0x0000a95a1000
-	12150 - PageTable: 'pd_tyn_vaddr_0xc0000000' @ 0x0000a95a2000
-	12151 - PageTable: 'pd_tyn_vaddr_0xffffe00000' @ 0x0000a95a3000
+	12147 - PageTable: 'pd_synrc_vaddr_0x200000' @ 0x0000a959f000
+	12148 - PageTable: 'pd_synrc_vaddr_0x50000000' @ 0x0000a95a0000
+	12149 - PageTable: 'pd_synrc_vaddr_0x80000000' @ 0x0000a95a1000
+	12150 - PageTable: 'pd_synrc_vaddr_0xc0000000' @ 0x0000a95a2000
+	12151 - PageTable: 'pd_synrc_vaddr_0xffffe00000' @ 0x0000a95a3000
 	12152 - PageTable: 'pt_audit_monitor_vaddr_0x10000000' @ 0x0000a95a4000
 	12153 - PageTable: 'pt_audit_monitor_vaddr_0x200000' @ 0x0000a95a5000
 	12154 - PageTable: 'pt_audit_monitor_vaddr_0xfffffff000' @ 0x0000a95a6000
@@ -12315,49 +12315,49 @@
 	12158 - PageTable: 'pt_console_vaddr_0xfffffff000' @ 0x0000a95aa000
 	12159 - PageTable: 'pt_monitor_vaddr_0x200000' @ 0x0000a95ab000
 	12160 - PageTable: 'pt_monitor_vaddr_0xffffffd000' @ 0x0000a95ac000
-	12161 - PageTable: 'pt_tyn_vaddr_0x10000000' @ 0x0000a95ad000
-	12162 - PageTable: 'pt_tyn_vaddr_0x200000' @ 0x0000a95ae000
-	12163 - PageTable: 'pt_tyn_vaddr_0x20000000' @ 0x0000a95af000
-	12164 - PageTable: 'pt_tyn_vaddr_0x30000000' @ 0x0000a95b0000
-	12165 - PageTable: 'pt_tyn_vaddr_0x30200000' @ 0x0000a95b1000
-	12166 - PageTable: 'pt_tyn_vaddr_0x30400000' @ 0x0000a95b2000
-	12167 - PageTable: 'pt_tyn_vaddr_0x30600000' @ 0x0000a95b3000
-	12168 - PageTable: 'pt_tyn_vaddr_0x30800000' @ 0x0000a95b4000
-	12169 - PageTable: 'pt_tyn_vaddr_0x30a00000' @ 0x0000a95b5000
-	12170 - PageTable: 'pt_tyn_vaddr_0x30c00000' @ 0x0000a95b6000
-	12171 - PageTable: 'pt_tyn_vaddr_0x30e00000' @ 0x0000a95b7000
-	12172 - PageTable: 'pt_tyn_vaddr_0x400000' @ 0x0000a95b8000
-	12173 - PageTable: 'pt_tyn_vaddr_0x50000000' @ 0x0000a95b9000
-	12174 - PageTable: 'pt_tyn_vaddr_0x50200000' @ 0x0000a95ba000
-	12175 - PageTable: 'pt_tyn_vaddr_0x54000000' @ 0x0000a95bb000
-	12176 - PageTable: 'pt_tyn_vaddr_0x54200000' @ 0x0000a95bc000
-	12177 - PageTable: 'pt_tyn_vaddr_0x54400000' @ 0x0000a95bd000
-	12178 - PageTable: 'pt_tyn_vaddr_0x54600000' @ 0x0000a95be000
-	12179 - PageTable: 'pt_tyn_vaddr_0x54800000' @ 0x0000a95bf000
-	12180 - PageTable: 'pt_tyn_vaddr_0x54a00000' @ 0x0000a95c0000
-	12181 - PageTable: 'pt_tyn_vaddr_0x54c00000' @ 0x0000a95c1000
-	12182 - PageTable: 'pt_tyn_vaddr_0x54e00000' @ 0x0000a95c2000
-	12183 - PageTable: 'pt_tyn_vaddr_0x600000' @ 0x0000a95c3000
-	12184 - PageTable: 'pt_tyn_vaddr_0x65000000' @ 0x0000a95c4000
-	12185 - PageTable: 'pt_tyn_vaddr_0x800000' @ 0x0000a95c5000
-	12186 - PageTable: 'pt_tyn_vaddr_0xa00000' @ 0x0000a95c6000
-	12187 - PageTable: 'pt_tyn_vaddr_0xfffffff000' @ 0x0000a95c7000
+	12161 - PageTable: 'pt_synrc_vaddr_0x10000000' @ 0x0000a95ad000
+	12162 - PageTable: 'pt_synrc_vaddr_0x200000' @ 0x0000a95ae000
+	12163 - PageTable: 'pt_synrc_vaddr_0x20000000' @ 0x0000a95af000
+	12164 - PageTable: 'pt_synrc_vaddr_0x30000000' @ 0x0000a95b0000
+	12165 - PageTable: 'pt_synrc_vaddr_0x30200000' @ 0x0000a95b1000
+	12166 - PageTable: 'pt_synrc_vaddr_0x30400000' @ 0x0000a95b2000
+	12167 - PageTable: 'pt_synrc_vaddr_0x30600000' @ 0x0000a95b3000
+	12168 - PageTable: 'pt_synrc_vaddr_0x30800000' @ 0x0000a95b4000
+	12169 - PageTable: 'pt_synrc_vaddr_0x30a00000' @ 0x0000a95b5000
+	12170 - PageTable: 'pt_synrc_vaddr_0x30c00000' @ 0x0000a95b6000
+	12171 - PageTable: 'pt_synrc_vaddr_0x30e00000' @ 0x0000a95b7000
+	12172 - PageTable: 'pt_synrc_vaddr_0x400000' @ 0x0000a95b8000
+	12173 - PageTable: 'pt_synrc_vaddr_0x50000000' @ 0x0000a95b9000
+	12174 - PageTable: 'pt_synrc_vaddr_0x50200000' @ 0x0000a95ba000
+	12175 - PageTable: 'pt_synrc_vaddr_0x54000000' @ 0x0000a95bb000
+	12176 - PageTable: 'pt_synrc_vaddr_0x54200000' @ 0x0000a95bc000
+	12177 - PageTable: 'pt_synrc_vaddr_0x54400000' @ 0x0000a95bd000
+	12178 - PageTable: 'pt_synrc_vaddr_0x54600000' @ 0x0000a95be000
+	12179 - PageTable: 'pt_synrc_vaddr_0x54800000' @ 0x0000a95bf000
+	12180 - PageTable: 'pt_synrc_vaddr_0x54a00000' @ 0x0000a95c0000
+	12181 - PageTable: 'pt_synrc_vaddr_0x54c00000' @ 0x0000a95c1000
+	12182 - PageTable: 'pt_synrc_vaddr_0x54e00000' @ 0x0000a95c2000
+	12183 - PageTable: 'pt_synrc_vaddr_0x600000' @ 0x0000a95c3000
+	12184 - PageTable: 'pt_synrc_vaddr_0x65000000' @ 0x0000a95c4000
+	12185 - PageTable: 'pt_synrc_vaddr_0x800000' @ 0x0000a95c5000
+	12186 - PageTable: 'pt_synrc_vaddr_0xa00000' @ 0x0000a95c6000
+	12187 - PageTable: 'pt_synrc_vaddr_0xfffffff000' @ 0x0000a95c7000
 	12188 - TCB: 'tcb_audit_monitor' @ 0x0000a95c8000
 	12189 - TCB: 'tcb_console' @ 0x0000a95c9000
 	12190 - TCB: 'tcb_monitor' @ 0x0000a95ca000
-	12191 - TCB: 'tcb_tyn' @ 0x0000a95cb000
+	12191 - TCB: 'tcb_synrc' @ 0x0000a95cb000
 	12192 - CNode: 'cnode_audit_monitor_root' @ 0x0000a95cc000
 	12193 - CNode: 'cnode_console_root' @ 0x0000a95cc800
-	12194 - CNode: 'cnode_tyn_root' @ 0x0000a95cd000
+	12194 - CNode: 'cnode_synrc_root' @ 0x0000a95cd000
 	12195 - SchedContext: 'sched_context_audit_monitor' @ 0x0000a95cd800
 	12196 - SchedContext: 'sched_context_console' @ 0x0000a95cd900
 	12197 - SchedContext: 'sched_context_monitor' @ 0x0000a95cda00
-	12198 - SchedContext: 'sched_context_tyn' @ 0x0000a95cdb00
+	12198 - SchedContext: 'sched_context_synrc' @ 0x0000a95cdb00
 	12199 - Notification: 'ntfn_audit_monitor' @ 0x0000a95cdc00
 	12200 - Notification: 'ntfn_console' @ 0x0000a95cdc40
-	12201 - Notification: 'ntfn_tyn' @ 0x0000a95cdc80
+	12201 - Notification: 'ntfn_synrc' @ 0x0000a95cdc80
 	12202 - Reply: 'reply_audit_monitor' @ 0x0000a95cdcc0
 	12203 - Reply: 'reply_console' @ 0x0000a95cdce0
 	12204 - Reply: 'reply_monitor' @ 0x0000a95cdd00
-	12205 - Reply: 'reply_tyn' @ 0x0000a95cdd20
+	12205 - Reply: 'reply_synrc' @ 0x0000a95cdd20
 	12206 - Endpoint: 'ep_fault_monitor' @ 0x0000a95cdd40

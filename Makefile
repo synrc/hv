@@ -3,7 +3,7 @@
 MICROKIT_SDK ?= $(HOME)/microkit-sdk-2.3.0
 BOARD        ?= qemu_virt_aarch64
 CONFIG       ?= debug
-SYSTEM       ?= tyn-beam
+SYSTEM       ?= synrc-beam
 TARGET       ?= aarch64-none-elf
 
 CC           = clang
@@ -11,7 +11,7 @@ LD           = /opt/homebrew/bin/ld.lld
 MICROKIT     = $(MICROKIT_SDK)/bin/microkit
 
 BOARD_DIR    = $(MICROKIT_SDK)/board/$(BOARD)/$(CONFIG)
-INC_FLAGS    = -I$(BOARD_DIR)/include -Ipds/console -Ipds/tyn
+INC_FLAGS    = -I$(BOARD_DIR)/include -Ipds/console -Ipds/synrc
 CFLAGS       = -target $(TARGET) -mgeneral-regs-only -ffreestanding -fno-builtin -nostdlib -Wall -Wextra -O2 $(INC_FLAGS)
 LDFLAGS      = -T $(BOARD_DIR)/lib/microkit.ld $(BOARD_DIR)/lib/libmicrokit.a
 
@@ -36,26 +36,25 @@ $(BUILD_DIR)/monitor.elf: pds/monitor/monitor.c
 	$(CC) $(CFLAGS) -c pds/monitor/monitor.c -o $(BUILD_DIR)/monitor.o
 	$(LD) $(BUILD_DIR)/monitor.o $(LDFLAGS) -o $@
 
-$(BUILD_DIR)/tyn.elf: pds/tyn/tyn_main.c pds/tyn/syscall_trap.c pds/tyn/vfs.c pds/tyn/beam_loader.c pds/tyn/beam_emulator.c
+$(BUILD_DIR)/synrc.elf: pds/synrc/synrc_main.c pds/synrc/syscall_trap.c pds/synrc/vfs.c pds/synrc/beam_loader.c pds/synrc/beam_emulator.c
 	@mkdir -p $(BUILD_DIR)
-	$(CC) $(CFLAGS) -c pds/tyn/tyn_main.c -o $(BUILD_DIR)/tyn_main.o
-	$(CC) $(CFLAGS) -c pds/tyn/syscall_trap.c -o $(BUILD_DIR)/syscall_trap.o
-	$(CC) $(CFLAGS) -c pds/tyn/vfs.c -o $(BUILD_DIR)/vfs.o
-	$(CC) $(CFLAGS) -c pds/tyn/beam_loader.c -o $(BUILD_DIR)/beam_loader.o
-	$(CC) $(CFLAGS) -c pds/tyn/beam_emulator.c -o $(BUILD_DIR)/beam_emulator.o
-	$(LD) $(BUILD_DIR)/tyn_main.o $(BUILD_DIR)/syscall_trap.o $(BUILD_DIR)/vfs.o $(BUILD_DIR)/beam_loader.o $(BUILD_DIR)/beam_emulator.o $(LDFLAGS) -o $@
+	$(CC) $(CFLAGS) -c pds/synrc/synrc_main.c -o $(BUILD_DIR)/synrc_main.o
+	$(CC) $(CFLAGS) -c pds/synrc/syscall_trap.c -o $(BUILD_DIR)/syscall_trap.o
+	$(CC) $(CFLAGS) -c pds/synrc/vfs.c -o $(BUILD_DIR)/vfs.o
+	$(CC) $(CFLAGS) -c pds/synrc/beam_loader.c -o $(BUILD_DIR)/beam_loader.o
+	$(CC) $(CFLAGS) -c pds/synrc/beam_emulator.c -o $(BUILD_DIR)/beam_emulator.o
+	$(LD) $(BUILD_DIR)/synrc_main.o $(BUILD_DIR)/syscall_trap.o $(BUILD_DIR)/vfs.o $(BUILD_DIR)/beam_loader.o $(BUILD_DIR)/beam_emulator.o $(LDFLAGS) -o $@
 
-$(BUILD_DIR)/loader.img: $(BUILD_DIR)/hello.elf $(BUILD_DIR)/console.elf $(BUILD_DIR)/monitor.elf $(BUILD_DIR)/tyn.elf systems/$(SYSTEM).system
+$(BUILD_DIR)/loader.img: $(BUILD_DIR)/hello.elf $(BUILD_DIR)/console.elf $(BUILD_DIR)/monitor.elf $(BUILD_DIR)/synrc.elf systems/$(SYSTEM).system
 	$(MICROKIT) systems/$(SYSTEM).system \
 	  --search-path $(BUILD_DIR) \
 	  --board $(BOARD) \
 	  --config $(CONFIG) \
 	  -o $@
 
-
-BEAM_ELF  = third_party/tyn/src/beam.aarch64.elf
+BEAM_ELF  = build/beam.aarch64.elf
 # Prefer OTP 20 rootfs (unversioned paths); fall back to original OTP 26 cpio
-BEAM_CPIO = $(or $(wildcard third_party/tyn/src/otp-rootfs-20.cpio),third_party/tyn/src/otp-rootfs.cpio)
+BEAM_CPIO = $(or $(wildcard build/otp-rootfs-20.cpio),build/otp-rootfs.cpio)
 
 # Option A: QEMU -device loader (default)
 # Loads beam.aarch64.elf at 0x50000000 and otp-rootfs.cpio at 0x54000000
@@ -84,11 +83,11 @@ embed: all
 	llvm-objcopy --add-section .beam_image=$(BEAM_ELF) \
 	             --set-section-flags .beam_image=load,alloc \
 	             --change-section-address .beam_image=0x50000000 \
-	             $(BUILD_DIR)/tyn.elf $(BUILD_DIR)/tyn.elf
+	             $(BUILD_DIR)/synrc.elf $(BUILD_DIR)/synrc.elf
 	llvm-objcopy --add-section .otp_rootfs=$(BEAM_CPIO) \
 	             --set-section-flags .otp_rootfs=load,alloc \
 	             --change-section-address .otp_rootfs=0x54000000 \
-	             $(BUILD_DIR)/tyn.elf $(BUILD_DIR)/tyn.elf
+	             $(BUILD_DIR)/synrc.elf $(BUILD_DIR)/synrc.elf
 	$(MICROKIT) systems/$(SYSTEM).system \
 	  --search-path $(BUILD_DIR) \
 	  --board $(BOARD) \

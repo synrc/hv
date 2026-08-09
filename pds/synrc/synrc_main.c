@@ -4,10 +4,9 @@
 #include "beam_loader.h"
 
 void init(void) {
-    microkit_dbg_puts("[tyn] OS.1 Tyn Protection Domain active\n");
+    microkit_dbg_puts("[synrc] OS.1 Synrc Protection Domain active.\n");
     tyn_syscall_init();
     vfs_init();
-    
     beam_loader_start();
 }
 

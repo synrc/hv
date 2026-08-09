@@ -7,7 +7,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-OUT_ELF="$REPO_ROOT/third_party/tyn/src/beam.aarch64.elf"
+OUT_ELF="$REPO_ROOT/build/beam.aarch64.elf"
 BUILD_DIR="$REPO_ROOT/build/otp20-aarch64"
 
 CROSS_GCC="$(command -v aarch64-linux-musl-gcc 2>/dev/null || true)"
@@ -135,7 +135,7 @@ aarch64-linux-musl-strip "$BEAM_BIN" -o "$OUT_ELF"
 
 # Build OTP 20 rootfs cpio (unversioned paths: /otp/lib/kernel/ebin/, /otp/lib/stdlib/ebin/)
 echo "[build-beam-aarch64] Building OTP 20 rootfs cpio..."
-OUT_CPIO="$REPO_ROOT/third_party/tyn/src/otp-rootfs-20.cpio"
+OUT_CPIO="$REPO_ROOT/build/otp-rootfs-20.cpio"
 STAGING="$BUILD_DIR/rootfs-staging"
 # rm -rf "$STAGING"
 mkdir -p "$STAGING/otp/bin" \

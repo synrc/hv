@@ -1,33 +1,25 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <system>
-    <!-- Phase 2: Microkit Protection Domains & Console / Tyn Isolation -->
-
+    <!-- Phase 2: Microkit Protection Domains & Console / synrc Isolation -->
     <!-- Memory region for console ring buffer -->
     <memory_region name="console_ring" size="0x4000" page_size="0x1000" />
-
     <!-- Memory region for audit monitor metrics ring buffer -->
     <memory_region name="monitor_ring" size="0x4000" page_size="0x1000" />
-
     <!-- Memory region for UART PL011 MMIO registers (0x09000000) -->
     <memory_region name="uart" size="0x1000" phys_addr="0x09000000" page_size="0x1000" />
-
     <!-- BEAM AArch64 ELF binary (4 MB) loaded by QEMU -device loader at 0x50000000 -->
     <memory_region name="beam_image" size="0x400000" phys_addr="0x50000000" page_size="0x1000" />
-
     <!-- OTP rootfs cpio archive (16 MB) loaded by QEMU -device loader at 0x54000000 -->
     <memory_region name="otp_rootfs" size="0x1000000" phys_addr="0x54000000" page_size="0x1000" />
-
     <!-- BEAM PT_LOAD destination: text 0x400000..0x64fa70, data+BSS 0x65ff78..0x6ae528
          Map 8 MB at 0x400000 with rwx so the ELF loader can write then execute BEAM code -->
     <memory_region name="beam_load_region" size="0x800000" phys_addr="0x58000000" page_size="0x1000" />
-
     <!-- BEAM Stack (1 MB) -->
     <memory_region name="beam_stack" size="0x100000" page_size="0x1000" />
     <!-- BEAM Heap for SYS_brk (16 MB) -->
     <memory_region name="beam_heap" size="0x1000000" page_size="0x1000" />
     <!-- BEAM Mmap for SYS_mmap (1152 MB) -->
     <memory_region name="beam_mmap" size="0x48000000" page_size="0x200000" />
-
     <!-- Protection Domain 1: Console (Exclusive UART Owner) -->
     <protection_domain name="console" priority="254">
         <program_image path="console.elf" />
@@ -35,16 +27,14 @@
         <map mr="uart" vaddr="0x09000000" perms="rw" cached="false" />
         <irq irq="33" id="2" />
     </protection_domain>
-
     <!-- Protection Domain 2: Audit Monitor (Metrics & NIST AU Audit Logger) -->
     <protection_domain name="audit_monitor" priority="200">
         <program_image path="monitor.elf" />
         <map mr="monitor_ring" vaddr="0x10000000" perms="rw" cached="true" />
     </protection_domain>
-
-    <!-- Protection Domain 3: Tyn (musl Syscall Trap Surface & BEAM Host) -->
-    <protection_domain name="tyn" priority="220">
-        <program_image path="tyn.elf" />
+    <!-- Protection Domain 3: synrc (musl Syscall Trap Surface & BEAM Host) -->
+    <protection_domain name="synrc" priority="220">
+        <program_image path="synrc.elf" />
         <map mr="console_ring" vaddr="0x10000000" perms="rw" cached="true" />
         <map mr="monitor_ring" vaddr="0x20000000" perms="rw" cached="true" />
         <!-- BEAM ELF binary mapped at 0x50000000 (read + execute) -->
@@ -53,22 +43,19 @@
         <map mr="otp_rootfs" vaddr="0x54000000" perms="r" cached="true" />
         <!-- BEAM PT_LOAD destination at 0x400000: rwx so loader writes then BEAM executes -->
         <map mr="beam_load_region" vaddr="0x00400000" perms="rwx" cached="true" />
-        
         <!-- Runtime memory for BEAM process -->
         <map mr="beam_stack" vaddr="0x65000000" perms="rw" cached="true" />
         <map mr="beam_heap" vaddr="0x30000000" perms="rw" cached="true" />
         <map mr="beam_mmap" vaddr="0x80000000" perms="rw" cached="true" />
     </protection_domain>
-
-    <!-- Channel 1: Tyn <-> Console -->
+    <!-- Channel 1: synrc <-> Console -->
     <channel>
-        <end pd="tyn" id="1" />
+        <end pd="synrc" id="1" />
         <end pd="console" id="1" />
     </channel>
-
-    <!-- Channel 2: Tyn <-> Audit Monitor -->
+    <!-- Channel 2: synrc <-> Audit Monitor -->
     <channel>
-        <end pd="tyn" id="2" />
+        <end pd="synrc" id="2" />
         <end pd="audit_monitor" id="1" />
     </channel>
 </system>

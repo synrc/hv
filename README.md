@@ -2,15 +2,25 @@ Synrc Hypervision
 =================
 
 Synrc Hypervision is an approch and specification for running unmodified Erlang/OTP BEAM virtual machines
-within isolated syscall provider Tyn side to side with Apline Linux PD for drivers inside seL4 microkit.
+within novel isolated syscall provider `Synrc` side to side with `Apline Linux` PD for drivers inside seL4 microkit.
 
 Requirements
 ------------
 
 * Bare-metal Type-1 lightweight hypervisor (sel4)
-* Isolation syscall layer for BEAM (tyn)
+* Isolation seL4 Microkit syscall layer for BEAM (synrc)
 * Unmodified Ericsson BEAM (beam)
 * Smallest scalable (from DC to IoT) Linux for drivers (alpine)
+
+Try
+---
+
+First you need to biuld patched last unicore Erlang/OTP 20.0 then biuld Synrc BEAM on macOS.
+
+```
+$ make build-beam-aarch64
+$ make clean && make all && make run
+```
 
 Abstract
 --------
@@ -22,7 +32,7 @@ trusted computing base (TCB) undermines strong security and certification argume
 We present a hybrid architecture that hosts an unmodified BEAM on the formally verified
 seL4 microkernel while retaining practical device support through a minimal Alpine Linux guest.
 
-A purpose-built thin host (Tyn) implements only the small set of Linux-compatible system calls
+A purpose-built thin host (synrc) implements only the small set of Linux-compatible system calls
 required by a musl-linked OTP runtime and executes as an isolated seL4 protection domain under
 the Microkit framework. Device drivers that would otherwise enlarge the TCB are
 confined to an Alpine Linux virtual machine managed by a lightweight virtual-machine monitor;
@@ -46,25 +56,20 @@ hv/
 ├── LICENSE                         # BSD-2-Clause (seL4-compatible)
 ├── Makefile                        # Top-level build entry point (BOARD, CONFIG, feature flags)
 │
-├── docs/                           # Human- and reviewer-oriented documentation
-│   ├── architecture.md             # Detailed component + morphism description (matches paper §2)
-│   ├── nist-800-53.md              # Full control mapping table + rationale
-│   └── paper-artifact.md           # How to reproduce every claim / figure / measurement in the paper
-│
 ├── boards/                         # Board-specific support
 │   ├── qemu_virt_aarch64/          # For reviewers who lack Pi 4 hardware
 │   └── rpi4b_8gb/                  # Raspberry Pi 4 (8 GB) platform files, memory map, UART, device tree fragments
 │
 ├── systems/                        # Microkit system descriptions (static architecture)
 │   ├── hello.system                # Minimal single-PD bring-up (Phase 0)
-│   ├── linux.system                # VMM + Alpine guest only (no Tyn/BEAM)
-│   ├── tyn-beam.system             # BEAM only (no Linux)
-│   └── hv.system                   # Synrc Hypervision: Tyn + BEAM + Alpine driver VM
+│   ├── linux.system                # VMM + Alpine guest only (no BEAM)
+│   ├── synrc-beam.system           # BEAM only (no Linux)
+│   └── hv.system                   # Synrc Hypervision: seL4 + Synrc BEAM + Alpine driver VM
 │
 ├── pds/                            # Source for each protection domain
 │   ├── hello/                      # Trivial “hello world” PD (serial output)
 │   ├── vmm/                        # libvmm-based VMM PD that starts the Alpine guest
-│   ├── tyn/                        # Adapted Tyn (syscall trap + BEAM host) as a Microkit PD
+│   ├── synrc/                      # Adapted Tyn (syscall trap + BEAM host) as a Microkit PD
 │   ├── console/                    # UART / console PD (exclusive device ownership)
 │   └── monitor/                    # Metrics & audit PD (NIST AU support)
 │
@@ -74,28 +79,26 @@ hv/
 │       ├── kernel-config           # Kernel .config (UIO, target drivers, minimal features)
 │       └── uio-helper/             # Userspace bridge: Linux drivers ↔ sDDF rings
 │
-├── beam/                           # OTP / BEAM packaging
-│   ├── rel/                        # Built OTP release (musl-linked)
-│   └── embed.mk                    # Rules that turn the release into a cpio/tar embedded in Tyn
-│
 ├── third_party/                    # Upstream dependencies (git submodules, pinned commits)
 │   ├── libvmm/                     # seL4/Microkit VMM library
-│   ├── sddf/                       # seL4 Device Driver Framework
-│   └── tyn/                        # Upstream Tyn kernel (reference; adaptations live in pds/tyn/)
+│   └── sddf/                       # seL4 Device Driver Framework
 │
 ├── scripts/                        # Automation (Python-free)
 │   ├── build-linux.sh              # Produce Alpine rootfs + kernel
-│   ├── build-image.sh              # Assemble final Microkit loader.img
-│   └── flash-sd.sh                 # Write image + firmware to microSD
+│   └── fetch-third-party.sh        # Fetch Erlang/OTP and VMM
 │
-└── evaluation/                     # Paper artefact support
-    ├── benchmarks/                 # Workload scripts (BEAM, network, storage)
-    ├── measurements/               # Raw data, logs, timing results
-    └── figures/                    # Source for paper figures (architecture diagrams, graphs)
+├── patches/                        # Patches for Elrang/OTP
+│   ├── 0001-ttsl_drv-baremetal.patch
+│   └── 0002-sys_drivers-baremetal.patch
+│
+└── beam-build/                     # Erlang/OTP 20
+    └── build-beam-aarch64.sh       # Build for muslc, Alpine and seL4
 ```
 
 Article
 -------
+
+Note that this project doesn't depend on Rust or Cloudozer code.
 
 * [1]. Namdak Tonpa. [Synrc Hypervision](https://hv.synrc.com/hv.pdf). 2026
 
