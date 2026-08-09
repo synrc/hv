@@ -1,9 +1,16 @@
 Synrc Hypervision
 =================
 
+Synrc Hypervision is an approch and specification for running unmodified Erlang/OTP BEAM virtual machines
+within isolated syscall provider Tyn side to side with Apline Linux PD for drivers inside seL4 microkit.
+
+Features
+--------
+
 * Bare-metal Type-1 lightweight hypervisor (sel4)
-* POSIX minimal layer for BEAM (tyn)
+* Isolation syscall layer for BEAM (tyn)
 * Unmodified Ericsson BEAM (beam)
+* Alpine Linux for drivers (alpine)
 
 Story
 -----
@@ -29,6 +36,62 @@ families onto seL4 capabilities and compile-time configuration, and a concrete b
 path on commodity hardware (Raspberry Pi 4). The design demonstrates that a production-grade
 BEAM application can operate with a dramatically reduced TCB while preserving the ability to
 utilise complex devices, offering a practical route toward higher-assurance, certifiable distributed systems.
+
+Breadcrumbs
+-----------
+
+```
+hv/
+├── README.md                       # Project overview, quick start, architecture summary, build instructions
+├── LICENSE                         # BSD-2-Clause (seL4-compatible)
+├── Makefile                        # Top-level build entry point (BOARD, CONFIG, feature flags)
+│
+├── docs/                           # Human- and reviewer-oriented documentation
+│   ├── architecture.md             # Detailed component + morphism description (matches paper §2)
+│   ├── nist-800-53.md              # Full control mapping table + rationale
+│   └── paper-artifact.md           # How to reproduce every claim / figure / measurement in the paper
+│
+├── boards/                         # Board-specific support
+│   └── rpi4b_8gb/                  # Raspberry Pi 4 (8 GB) platform files, memory map, UART, device tree fragments
+│
+├── systems/                        # Microkit system descriptions (static architecture)
+│   ├── hello.system                # Minimal single-PD bring-up (Phase 0)
+│   ├── linux.system                # VMM + Alpine guest only (no Tyn/BEAM)
+│   ├── tyn-beam.system             # BEAM only (no Linux)
+│   └── hv.system                   # Synrc Hypervision: Tyn + BEAM + Alpine driver VM
+│
+├── pds/                            # Source for each protection domain
+│   ├── hello/                      # Trivial “hello world” PD (serial output)
+│   ├── vmm/                        # libvmm-based VMM PD that starts the Alpine guest
+│   ├── tyn/                        # Adapted Tyn (syscall trap + BEAM host) as a Microkit PD
+│   ├── console/                    # UART / console PD (exclusive device ownership)
+│   └── monitor/                    # Metrics & audit PD (NIST AU support)
+│
+├── linux/                          # Linux guest artefacts (Alpine)
+│   └── alpine/
+│       ├── rootfs/                 # Minimal Alpine root filesystem
+│       ├── kernel-config           # Kernel .config (UIO, target drivers, minimal features)
+│       └── uio-helper/             # Userspace bridge: Linux drivers ↔ sDDF rings
+│
+├── beam/                           # OTP / BEAM packaging
+│   ├── rel/                        # Built OTP release (musl-linked)
+│   └── embed.mk                    # Rules that turn the release into a cpio/tar embedded in Tyn
+│
+├── third_party/                    # Upstream dependencies (git submodules, pinned commits)
+│   ├── libvmm/                     # seL4/Microkit VMM library
+│   ├── sddf/                       # seL4 Device Driver Framework
+│   └── tyn/                        # Upstream Tyn kernel (reference; adaptations live in pds/tyn/)
+│
+├── scripts/                        # Automation (Python-free)
+│   ├── build-linux.sh              # Produce Alpine rootfs + kernel
+│   ├── build-image.sh              # Assemble final Microkit loader.img
+│   └── flash-sd.sh                 # Write image + firmware to microSD
+│
+└── evaluation/                     # Paper artefact support
+    ├── benchmarks/                 # Workload scripts (BEAM, network, storage)
+    ├── measurements/               # Raw data, logs, timing results
+    └── figures/                    # Source for paper figures (architecture diagrams, graphs)
+```
 
 Article
 -------
