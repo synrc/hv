@@ -15,7 +15,7 @@ Requirements
 Try
 ---
 
-First you need to biuld patched last unicore Erlang/OTP 20.0 then biuld Synrc BEAM on macOS.
+First you need to build patched last unicore Erlang/OTP 20.0 then build Synrc BEAM on macOS.
 
 ```
 $ make build-beam-aarch64
