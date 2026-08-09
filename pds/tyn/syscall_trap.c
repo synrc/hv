@@ -73,6 +73,7 @@ typedef struct {
     const vfs_file_t *file;
     size_t offset;
     int    used;
+    char   dir_path[128];
 } fd_entry_t;
 
 static fd_entry_t fd_table[FD_MAX];
@@ -97,12 +98,23 @@ static void tyn_strcpy(char *dst, const char *src) {
     while ((*dst++ = *src++));
 }
 
-static int fd_alloc(const vfs_file_t *f) {
+static void tyn_strncpy(char *dst, const char *src, size_t n) {
+    size_t i;
+    for (i = 0; i < n - 1 && src[i] != '\0'; i++) dst[i] = src[i];
+    dst[i] = '\0';
+}
+
+static int fd_alloc(const vfs_file_t *f, const char *dir_path) {
     for (int i = 3; i < FD_MAX; i++) {
         if (!fd_table[i].used) {
-            fd_table[i].file   = f;
+            fd_table[i].used = 1;
+            fd_table[i].file = f;
             fd_table[i].offset = 0;
-            fd_table[i].used   = 1;
+            if (dir_path) {
+                tyn_strncpy(fd_table[i].dir_path, dir_path, 128);
+            } else {
+                fd_table[i].dir_path[0] = '\0';
+            }
             return i;
         }
     }
@@ -150,8 +162,8 @@ long tyn_syscall_dispatch(long sysno, long a1, long a2, long a3, long a4, long a
 
         case SYS_pipe2: {
             int *pipefd = (int *)a1;
-            int fd0 = fd_alloc(&dev_null_file);
-            int fd1 = fd_alloc(&dev_null_file);
+            int fd0 = fd_alloc(&dev_null_file, 0);
+            int fd1 = fd_alloc(&dev_null_file, 0);
             if (fd0 < 0 || fd1 < 0) return -1;
             pipefd[0] = fd0;
             pipefd[1] = fd1;
@@ -161,15 +173,59 @@ long tyn_syscall_dispatch(long sysno, long a1, long a2, long a3, long a4, long a
         case SYS_fcntl:
             return 0;
 
-        case SYS_ioctl:
-            return 0;
+        case SYS_ioctl: {
+            // debug print
+            microkit_dbg_puts("[tyn] SYS_ioctl req=");
+            char hex[16];
+            int fd = (int)a1;
+            long req = a2;
+            if (fd == 0 || fd == 1 || fd == 2) {
+                if (req == 0x5401) { // TCGETS
+                    struct termios_ptr {
+                        uint32_t c_iflag;
+                        uint32_t c_oflag;
+                        uint32_t c_cflag;
+                        uint32_t c_lflag;
+                        uint8_t c_line;
+                        uint8_t c_cc[32];
+                        uint32_t c_ispeed;
+                        uint32_t c_ospeed;
+                    } *t = (void*)a3;
+                    if (t) {
+                        for (size_t i = 0; i < sizeof(*t); i++) ((char *)t)[i] = 0;
+                        t->c_iflag = 0x500;
+                        t->c_oflag = 0x5;
+                        t->c_cflag = 0xbf;
+                        t->c_lflag = 0x8a3b;
+                    }
+                    return 0;
+                }
+                return 0; // fake success for other terminal ioctls
+            }
+
+            if (a2 == 0x5413) { // TIOCGWINSZ
+                uint16_t *ws = (uint16_t *)a3;
+                if (ws) {
+                    ws[0] = 24; // rows
+                    ws[1] = 80; // cols
+                    ws[2] = 0;
+                    ws[3] = 0;
+                }
+                return 0;
+            }
+            return -25; // ENOTTY
+        }
 
         case SYS_read: {
             int fd = (int)a1;
             char *buf = (char *)a2;
             size_t count = (size_t)a3;
             if (fd == 0) {
-                return (long)console_ring_read_rx(console_ring, buf, count);
+                static int read_count = 0;
+                if (read_count++ < 10) microkit_dbg_puts("[tyn] SYS_read(0)\n");
+                size_t c = console_ring_read_rx(console_ring, buf, count);
+                if (c == 0) return -11; // EAGAIN
+                return (long)c;
             }
             if (fd >= 3 && fd < FD_MAX && fd_table[fd].used) {
                 fd_entry_t *e = &fd_table[fd];
@@ -246,7 +302,8 @@ long tyn_syscall_dispatch(long sysno, long a1, long a2, long a3, long a4, long a
                 f = vfs_lookup(path);
             }
             if (!f) return -2; // ENOENT
-            int fd = fd_alloc(f);
+            const char *dp = streq(f->path, "DIR") ? path : 0;
+            int fd = fd_alloc(f, dp);
             return fd < 0 ? -24 : (long)fd; // EMFILE
         }
 
@@ -281,12 +338,19 @@ long tyn_syscall_dispatch(long sysno, long a1, long a2, long a3, long a4, long a
                 if (!st) return -14; // EFAULT
                 for (int i = 0; i < 128; i++) st[i] = 0;
                 
-                // st_mode at offset 16: set S_IFREG | 0644 = 0x81A4
-                st[16] = 0xA4; st[17] = 0x81;
-                // st_size at offset 48
-                size_t sz = fd_table[fd].file->size;
-                uint8_t *p = st + 48;
-                for (int i = 0; i < 8; i++) { p[i] = (uint8_t)(sz & 0xFF); sz >>= 8; }
+                if (streq(fd_table[fd].file->path, "DIR")) {
+                    // st_mode at offset 16: set S_IFDIR | 0755 = 0x41ED
+                    st[16] = 0xED; st[17] = 0x41;
+                    st[20] = 2; // nlink
+                } else {
+                    // st_mode at offset 16: set S_IFREG | 0644 = 0x81A4
+                    st[16] = 0xA4; st[17] = 0x81;
+                    st[20] = 1;
+                    // st_size at offset 48
+                    size_t sz = fd_table[fd].file->size;
+                    uint8_t *p = st + 48;
+                    for (int i = 0; i < 8; i++) { p[i] = (uint8_t)(sz & 0xFF); sz >>= 8; }
+                }
                 
                 microkit_dbg_puts("[tyn] SYS_fstat: success\n");
                 return 0;
@@ -304,21 +368,23 @@ long tyn_syscall_dispatch(long sysno, long a1, long a2, long a3, long a4, long a
             if (!st) return -14; // EFAULT
             // zero the entire stat buffer (128 bytes)
             for (int i = 0; i < 128; i++) st[i] = 0;
-            // st_mode at offset 16: set S_IFREG | 0644 = 0x81A4
-            st[16] = 0xA4; st[17] = 0x81;
-            // look up file size from VFS
+            
             const vfs_file_t *f = vfs_lookup(path);
             if (f) {
-                // st_size at offset 48
-                size_t sz = f->size;
-                uint8_t *p = st + 48;
-                for (int i = 0; i < 8; i++) { p[i] = (uint8_t)(sz & 0xFF); sz >>= 8; }
-                // st_nlink=1 at offset 20
-                st[20] = 1;
+                if (streq(f->path, "DIR")) {
+                    st[16] = 0xED; st[17] = 0x41; // S_IFDIR|0755
+                    st[20] = 2;
+                } else {
+                    st[16] = 0xA4; st[17] = 0x81; // S_IFREG|0644
+                    st[20] = 1;
+                    // st_size at offset 48
+                    size_t sz = f->size;
+                    uint8_t *p = st + 48;
+                    for (int i = 0; i < 8; i++) { p[i] = (uint8_t)(sz & 0xFF); sz >>= 8; }
+                }
             } else {
-                // directory or unknown: return a plausible dir stat
-                st[16] = 0xED; st[17] = 0x41; // S_IFDIR|0755
-                st[20] = 2;
+                // Not found
+                return -2; // ENOENT
             }
             return 0;
         }
@@ -326,8 +392,20 @@ long tyn_syscall_dispatch(long sysno, long a1, long a2, long a3, long a4, long a
         case SYS_faccessat:  // 48 — covers access() alias too
             return 0;
 
-        case SYS_getdents64:
-            return 0;
+        case SYS_getdents64: {
+            int fd = (int)a1;
+            uint8_t *buf = (uint8_t *)a2;
+            size_t count = (size_t)a3;
+            
+            if (fd >= 3 && fd < FD_MAX && fd_table[fd].used) {
+                if (fd_table[fd].dir_path[0] != '\0') {
+                    int res = vfs_getdents(fd_table[fd].dir_path, buf, count, &fd_table[fd].offset);
+                    if (res >= 0) return res;
+                }
+                return 0; // Not a directory or empty
+            }
+            return -9; // EBADF
+        }
 
         case SYS_readlink: {
             // /proc/self/exe -> /otp/erts-9.3/bin/beam
@@ -511,8 +589,8 @@ long tyn_syscall_dispatch(long sysno, long a1, long a2, long a3, long a4, long a
             // Give it two dev_null fds so spawn_init succeeds
             int *fds = (int *)a4;  // on AArch64: a1=domain a2=type a3=proto a4=sv
             if (!fds) return -22; // EINVAL
-            int fd0 = fd_alloc(&dev_null_file);
-            int fd1 = fd_alloc(&dev_null_file);
+            int fd0 = fd_alloc(&dev_null_file, 0);
+            int fd1 = fd_alloc(&dev_null_file, 0);
             if (fd0 < 0 || fd1 < 0) return -24; // EMFILE
             fds[0] = fd0;
             fds[1] = fd1;
@@ -521,7 +599,7 @@ long tyn_syscall_dispatch(long sysno, long a1, long a2, long a3, long a4, long a
 
         case SYS_socket:
             // Return a dev_null fd so callers don't get -1 and crash
-            return fd_alloc(&dev_null_file);
+            return fd_alloc(&dev_null_file, 0);
 
         case SYS_bind:
         case SYS_listen:
@@ -544,26 +622,71 @@ long tyn_syscall_dispatch(long sysno, long a1, long a2, long a3, long a4, long a
         // I/O multiplexing — return immediately (no fds ready)
         // ----------------------------------------------------------------
         case SYS_epoll_create1:
-            return fd_alloc(&dev_null_file);
+            return fd_alloc(&dev_null_file, 0);
 
         case SYS_epoll_ctl:
             return 0;
 
-        case SYS_epoll_wait:
-        case SYS_pselect6:
-            return 0; // 0 events ready
+        case SYS_epoll_wait: {
+            static int epoll_count = 0;
+            if (epoll_count++ < 10) microkit_dbg_puts("[tyn] SYS_epoll_wait\n");
+            return 0;
+        }
+
+        case SYS_pselect6: {
+            static int ps_count = 0;
+            if (ps_count++ < 10) microkit_dbg_puts("[tyn] SYS_pselect6\n");
+            int nfds = (int)a1;
+            uint8_t *readfds = (uint8_t *)a2;
+            int ready = 0;
+            if (nfds > 0 && readfds) {
+                int has_data = console_ring && (console_ring->rx_tail != console_ring->rx_head);
+                if ((readfds[0] & 1) && has_data) ready++;
+                for (int i = 0; i < (nfds + 7) / 8; i++) {
+                    if (i == 0 && (readfds[0] & 1) && has_data) readfds[0] = 1;
+                    else readfds[i] = 0;
+                }
+            }
+            return ready;
+        }
 
         case SYS_eventfd2:
-            return fd_alloc(&dev_null_file);
+            return fd_alloc(&dev_null_file, 0);
 
-        case SYS_poll:
-            return 0; // 0 events
+        case SYS_poll: {
+            static int poll_count = 0;
+            if (poll_count++ < 10) microkit_dbg_puts("[tyn] SYS_poll\n");
+            struct pollfd_ptr { int fd; short events; short revents; } *fds = (void *)a1;
+            size_t nfds = (size_t)a2;
+            int ready = 0;
+            if (fds && nfds > 0) {
+                int has_data = console_ring && (console_ring->rx_tail != console_ring->rx_head);
+                for (size_t i = 0; i < nfds; i++) {
+                    if (fds[i].fd == 0 && has_data) {
+                        fds[i].revents = fds[i].events;
+                        if (fds[i].revents) ready++;
+                    } else {
+                        fds[i].revents = 0;
+                    }
+                }
+            }
+            return ready;
+        }
 
         // ----------------------------------------------------------------
         // Process management — no real fork/exec support
         // ----------------------------------------------------------------
         case SYS_clone:
             return -11; // EAGAIN — cannot create child process
+
+        case 23: // SYS_dup
+        case 24: // SYS_dup3
+            return -38; // ENOSYS
+
+        case 204: // SYS_getsockname
+        case 211: // SYS_sendmsg
+        case 212: // SYS_recvmsg
+            return -38; // ENOSYS
 
         case SYS_wait4:
         case SYS_waitid:
@@ -573,7 +696,7 @@ long tyn_syscall_dispatch(long sysno, long a1, long a2, long a3, long a4, long a
             return 0;
 
         case SYS_signalfd4:
-            return fd_alloc(&dev_null_file);
+            return fd_alloc(&dev_null_file, 0);
 
         // ----------------------------------------------------------------
         // Exit
@@ -582,6 +705,7 @@ long tyn_syscall_dispatch(long sysno, long a1, long a2, long a3, long a4, long a
         case SYS_exit_group:
             microkit_dbg_puts("[tyn] BEAM runtime process exited.\n");
             for (;;) {}
+
 
 
         default: {

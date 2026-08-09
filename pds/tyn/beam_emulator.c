@@ -7,14 +7,12 @@
 extern int beam_smp_main(int argc, char **argv);
 
 int beam_main(int argc, char **argv) {
-    microkit_dbg_puts("[beam.smp] Initializing Erlang/OTP 26 erts-14.0 emulator...\n");
-    microkit_dbg_puts("[beam.smp] Bootstrapping native ERTS process scheduler & musl environment...\n");
-
-    // Pass execution directly to real BEAM main entry point
+    (void)argc; (void)argv;
+    microkit_dbg_puts("[beam.smp] Initializing Erlang/OTP emulator fallback...\n");
 #if defined(__aarch64__)
-    // Drive real BEAM stdin/stdout syscall streams via Tyn musl trap dispatcher
     return 0;
 #else
+    extern int beam_smp_main(int argc, char **argv);
     return beam_smp_main(argc, argv);
 #endif
 }

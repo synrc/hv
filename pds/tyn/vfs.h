@@ -11,3 +11,4 @@ typedef struct {
 
 void vfs_init(void);
 const vfs_file_t *vfs_lookup(const char *path);
+int vfs_getdents(const char *dir_path, uint8_t *buf, size_t count, size_t *offset_ptr);

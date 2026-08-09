@@ -67,11 +67,10 @@ static char *beam_argv[] = {
     "-root", "/otp",
     "-progname", "erl",
     "-home", "/",
-    "-noshell",
     "-boot", "/otp/bin/start",
     0
 };
-static const int beam_argc = 17;
+static const int beam_argc = 16;
 
 // -------------------------------------------------------------------------
 // envp[] — BEAM's sys.c fatally exits without BINDIR/ROOTDIR/EMU
