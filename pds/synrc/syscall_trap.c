@@ -122,7 +122,7 @@ static int fd_alloc(const vfs_file_t *f, const char *dir_path) {
 }
 
 void tyn_syscall_init(void) {
-    microkit_dbg_puts("[synrc] Tyn host trap dispatcher online (~50 musl syscall handlers ready)\n");
+    microkit_dbg_puts("[synrc] Synrc host trap dispatcher online (~50 musl syscall handlers ready)\n");
     for (int i = 0; i < FD_MAX; i++) {
         fd_table[i].file   = 0;
         fd_table[i].offset = 0;
