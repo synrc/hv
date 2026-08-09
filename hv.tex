@@ -92,7 +92,6 @@
 
 \maketitle
 \tableofcontents
-\newpage
 
 \begin{abstract}
 The Erlang/OTP BEAM runtime provides robust concurrency, fault isolation, and soft real-time behaviour that
@@ -144,6 +143,7 @@ The resulting architecture keeps the TCB under the BEAM extremely small (seL4 + 
 
 This paper presents the architecture in detail, describes the principal protection domains and their interactions, and outlines the compile-time configuration model that governs resource allocation and scheduling.
 
+\newpage
 \section{Architecture}
 \label{sec:architecture}
 
@@ -188,6 +188,7 @@ The dominant data and control paths are:
 
 All authority is expressed by seL4 capabilities granted at system construction. There is no ambient authority.
 
+\newpage
 \subsection{seL4 Microkit Capabilities}
 \label{sec:microkit}
 
@@ -331,10 +332,61 @@ Compile-time selection (\texttt{NET=1}) determines which implementation is linke
 Core affinity for the network domain can be set independently so that packet processing does
 not perturb BEAM’s soft real-time behaviour.
 
+\newpage
+\subsection{NIST SP 800-53 Control Mapping}
+\label{sec:nist}
+
+Tynse’s static, capability-based design maps naturally onto several families of NIST SP~800-53 controls. The table below summarises the primary alignments. This is a design-time correspondence, not a formal certification claim.
+
+\begin{center}
+\noindent\makebox[\textwidth][c]{
+\begin{tabular}{p{6cm}p{3cm}p{8cm}}
+\toprule
+\textbf{Family} & \textbf{Example Controls} & \textbf{How Tynse addresses them} \\
+\midrule
+\textbf{AC} Access Control
+  & AC-3, AC-4, AC-6
+  & seL4 capabilities and Microkit channels enforce least privilege and information-flow control; no ambient authority exists at runtime. \\
+\addlinespace
+\textbf{AU} Audit \& Accountability
+  & AU-2, AU-12
+  & Monitor PD collects events and metrics over explicit notification channels; audit data can be exported or retained in a dedicated region. \\
+\addlinespace
+\textbf{CM} Configuration Management
+  & CM-2, CM-6, CM-7
+  & All isolation boundaries, device ownership and feature sets are fixed at image-construction time; unused components are compiled out. \\
+\addlinespace
+\textbf{SC} System \& Communications Protection
+  & SC-7, SC-39
+  & Strong spatial isolation between PDs; boundary protection is realised by capability checks rather than software firewalls. \\
+\addlinespace
+\textbf{SI} System \& Information Integrity
+  & SI-7, SI-16
+  & Static, reproducible images; capability-based memory protection; optional measured-boot hooks. \\
+\addlinespace
+\textbf{CP} Contingency Planning
+  & CP-9, CP-10
+  & BEAM supervision trees provide deterministic process-level recovery inside the Tyn domain; seL4 contains failures to the originating PD. \\
+\addlinespace
+\textbf{IA} Identification \& Authentication
+  & IA-2, IA-5
+  & Optional; can be realised as a dedicated protection domain that authenticates external principals before granting channels. \\
+\addlinespace
+\textbf{SA} System \& Services Acquisition
+  & SA-11, SA-15
+  & Small TCB, open design, reproducible builds, and clear separation of upstream components (seL4, Microkit, Tyn, Alpine). \\
+\bottomrule
+\end{tabular}
+}
+\end{center}
+
+The compile-time flags (\texttt{SECURITY=nist53}, \texttt{MONITOR=1}, \texttt{CORES}, \texttt{AFFINITY}, etc.) directly influence the strength of the above controls by determining which domains are present, which devices are accessible, and how CPU time is partitioned.
+
+\newpage
 \section{Conclusion}
 \label{sec:conclusion}
 
-Tynse demonstrates that a production-grade, unmodified BEAM runtime can be hosted on the formally verified seL4
+Synrc Hypervision demonstrates that a production-grade, unmodified BEAM runtime can be hosted on the formally verified seL4
 microkernel with a dramatically reduced trusted computing base while still retaining practical access to complex
 devices. The architecture achieves this by:
 
