@@ -4,16 +4,16 @@ Synrc Hypervision
 Synrc Hypervision is an approch and specification for running unmodified Erlang/OTP BEAM virtual machines
 within isolated syscall provider Tyn side to side with Apline Linux PD for drivers inside seL4 microkit.
 
-Features
---------
+Requirements
+------------
 
 * Bare-metal Type-1 lightweight hypervisor (sel4)
 * Isolation syscall layer for BEAM (tyn)
 * Unmodified Ericsson BEAM (beam)
-* Alpine Linux for drivers (alpine)
+* Smallest scalable (from DC to IoT) Linux for drivers (alpine)
 
-Story
------
+Abstract
+--------
 
 The Erlang/OTP BEAM runtime provides robust concurrency, fault isolation,
 and soft real-time behaviour that make it attractive for high-availability systems,
@@ -37,8 +37,8 @@ path on commodity hardware (Raspberry Pi 4). The design demonstrates that a prod
 BEAM application can operate with a dramatically reduced TCB while preserving the ability to
 utilise complex devices, offering a practical route toward higher-assurance, certifiable distributed systems.
 
-Breadcrumbs
------------
+Tree
+----
 
 ```
 hv/
@@ -52,6 +52,7 @@ hv/
 │   └── paper-artifact.md           # How to reproduce every claim / figure / measurement in the paper
 │
 ├── boards/                         # Board-specific support
+│   ├── qemu_virt_aarch64/          # For reviewers who lack Pi 4 hardware
 │   └── rpi4b_8gb/                  # Raspberry Pi 4 (8 GB) platform files, memory map, UART, device tree fragments
 │
 ├── systems/                        # Microkit system descriptions (static architecture)
