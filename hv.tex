@@ -1,0 +1,352 @@
+\documentclass{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage{helvet}
+\usepackage{geometry}
+\usepackage{xcolor}
+\usepackage{eso-pic}
+\usepackage{fancyhdr}
+\usepackage{parskip}
+\usepackage{microtype}
+\usepackage[english, ukrainian]{babel}
+\usepackage{url}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{amsthm}
+\usepackage{longtable}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{titlesec}
+
+\definecolor{nato}{HTML}{293757}
+\definecolor{footergray}{gray}{0.65}
+
+\geometry{a4paper,left=3cm,right=3cm,top=3cm,bottom=3cm}
+\renewcommand{\familydefault}{\sfdefault}
+\setcounter{secnumdepth}{3}
+
+\DeclareFontFamily{T2A}{phv}{}
+\DeclareFontShape{T2A}{phv}{m}{n}{<->ssub * cmss/m/n}{}
+\DeclareFontShape{T2A}{phv}{bx}{n}{<->ssub * cmss/bx/n}{}
+\DeclareFontShape{T2A}{phv}{m}{it}{<->ssub * cmss/m/it}{}
+\DeclareFontShape{T2A}{phv}{bx}{it}{<->ssub * cmss/bx/it}{}
+
+\titleformat{\section} {\color{nato}\Huge\bfseries}{\thesection.}{1em}{}
+\titlespacing*{\section}{0pt}{30pt}{12pt}
+\titleformat{\subsection} {\color{nato}\LARGE\bfseries}{\thesubsection.}{1em}{}
+\titlespacing*{\subsection}{0pt}{20pt}{8pt}
+\titleformat{\subsubsection} {\color{nato}\Large\bfseries}{\thesubsubsection.}{1em}{}
+\titlespacing*{\subsubsection}{0pt}{10pt}{6pt}
+\titleformat{\paragraph} {\color{nato}\large\bfseries}{\theparagraph.}{1em}{}
+\titlespacing*{\paragraph}{0pt}{8pt}{4pt}
+
+
+\fancyhf{}
+\fancyhead[R]{\small\color{footergray} 27 червня 2026}
+\fancyfoot[L]{\small\color{footergray} ERP/1. Операційна система}
+\fancyfoot[R]{\small\color{footergray}\thepage}
+
+\newcommand\HUGE[1]{\fontsize{40}{40}\selectfont #1}
+\renewcommand{\headrulewidth}{0pt}
+\renewcommand{\footrulewidth}{0.4pt}
+\renewcommand{\footrule}{\color{footergray}\hrule width \textwidth height 0.4pt}
+
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{tikz}
+\usetikzlibrary{shapes.geometric, arrows, arrows.meta, positioning, fit, backgrounds}
+
+\let\originalfootnotesize\footnotesize
+\let\oldverbatim\verbatim
+\let\oldendverbatim\endverbatim
+\renewenvironment{verbatim}{\originalfootnotesize\oldverbatim}{\oldendverbatim}
+
+\title{\textbf{OS.1}: High-Assurance BEAM \\ on seL4 with Alpine VMM for drivers}
+\author{Namdak Tonpa (maxim@synrc.com), Synrc Research}
+\date{\today}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    filecolor=magenta,
+    urlcolor=cyan,
+    pdftitle={OS.1 Hypervision},
+    pdfpagemode=FullScreen,
+}
+
+\begin{document}
+
+\begin{titlepage}
+  \AddToShipoutPictureBG*{\AtPageLowerLeft{\color{nato}\rule{\paperwidth}{\paperheight}}}
+  \color{white}\thispagestyle{empty}\vspace*{3cm}\centering
+  {\Huge  \textbf{Zen Crypted Operating System} \par} \vspace{1.5cm}
+  {\HUGE  \textbf{Технічне завдання} \par} \vspace{1.5cm}
+  {\LARGE \textbf{на розробку та впровадження \\ операційної системи OS.1 \\ на гіпервізорі seL4} \par} \vspace{1.5cm}
+  {\large На основі Технічних Вимог \par}
+  {\large Згідно з Постановою КМУ № 205 від 21.02.2025 \par}
+  {\large Формалізованих за стандартом ISO/IEC/IEEE 29148:2018 \par} \vfill
+  {\large 2026 \copyright\ Криптографічні Телесистеми \par}
+\end{titlepage}
+
+\maketitle
+\tableofcontents
+\newpage
+
+\begin{abstract}
+The Erlang/OTP BEAM runtime provides robust concurrency, fault isolation, and soft real-time behaviour that
+make it attractive for high-availability systems, yet it traditionally depends on a large general-purpose
+operating system whose trusted computing base (TCB) undermines strong security and certification arguments.
+We present Tynse, a hybrid architecture that hosts an unmodified BEAM on the formally verified seL4
+microkernel while retaining practical device support through a minimal Alpine Linux guest.
+
+A purpose-built thin host (Tyn) implements only the small set of Linux-compatible system calls required
+by a musl-linked OTP runtime and executes as an isolated seL4 protection domain under the Microkit framework.
+Device drivers that would otherwise enlarge the TCB are confined to an Alpine Linux virtual machine managed
+by a lightweight virtual-machine monitor; communication between the BEAM domain and the driver domain occurs
+exclusively through capability-mediated shared-memory channels defined by the seL4 Device Driver
+Framework (sDDF). The resulting system therefore combines the formal isolation guarantees of seL4,
+the minimal attack surface of a BEAM-specific host, and the hardware coverage of an existing
+Linux driver ecosystem.
+
+We describe the static system architecture, the mapping of selected NIST SP~800-53 control families
+onto seL4 capabilities and compile-time configuration, and a concrete bootstrap path on commodity
+hardware (Raspberry Pi~4). The design demonstrates that a production-grade BEAM application can
+operate with a dramatically reduced TCB while preserving the ability to utilise complex devices,
+offering a practical route toward higher-assurance, certifiable distributed systems.
+\end{abstract}
+
+\section{Introduction}
+\label{sec:intro}
+
+Erlang/OTP and its BEAM virtual machine have long been valued for building highly concurrent,
+fault-tolerant distributed systems. The language-level process model, supervision trees,
+and soft real-time scheduling provide strong application-level isolation and recovery.
+However, these benefits sit atop a conventional general-purpose operating system (typically Linux)
+whose large trusted computing base (TCB) remains a significant obstacle to high-assurance and certification arguments.
+
+Formal isolation at the kernel level has advanced substantially with the seL4 microkernel,
+which offers a machine-checked proof of functional correctness and integrity. Yet running
+a full Linux guest under seL4 merely relocates the TCB problem. Conversely, pure unikernel
+approaches that eliminate the general-purpose OS often force substantial rewriting of
+application runtimes or sacrifice device-driver coverage.
+
+Tynse addresses this tension by combining three elements:
+
+\begin{itemize}
+  \item the formally verified seL4 microkernel and its Microkit framework for static, capability-based system construction;
+  \item Tyn, a minimal host that supplies only the approximately fifty Linux-compatible system calls required by a musl-linked, unmodified OTP BEAM;
+  \item a carefully confined Alpine Linux virtual machine that supplies real device drivers, communicating with the BEAM domain solely through seL4 Device Driver Framework (sDDF) shared-memory channels.
+\end{itemize}
+
+The resulting architecture keeps the TCB under the BEAM extremely small (seL4 + Tyn) while still permitting practical use of complex hardware. All isolation boundaries, scheduling parameters, and device ownership are fixed at image-construction time, yielding a static system amenable to analysis and aligned with selected families of NIST SP~800-53 controls.
+
+This paper presents the architecture in detail, describes the principal protection domains and their interactions, and outlines the compile-time configuration model that governs resource allocation and scheduling.
+
+\section{Architecture}
+\label{sec:architecture}
+
+Tynse is organised as a static collection of seL4 protection domains (PDs) whose memory regions, communication channels, interrupt bindings and scheduling contexts are declared in a Microkit system description and materialised at build time. No protection domain or channel can be created dynamically at runtime.
+
+\subsection{Components and Links}
+\label{sec:components}
+
+The principal components and the morphisms that connect them are summarised below.
+
+\begin{center}
+\noindent\makebox[\textwidth][c]{
+\begin{tabular}{llp{10cm}}
+\toprule
+\textbf{Component} & \textbf{Type} & \textbf{Responsibility} \\
+\midrule
+seL4               & Microkernel          & Isolation, capabilities, MCS scheduling, IRQ routing \\
+Microkit           & Framework            & Static system description $\to$ concrete capability layout \\
+Tyn                & Protection Domain    & Syscall trap surface and minimal host for BEAM \\
+BEAM / OTP         & Application runtime  & Erlang/Elixir processes, schedulers, supervision \\
+VMM (libvmm)       & Protection Domain    & Creates and manages the Alpine Linux guest \\
+Alpine Linux guest & Virtual Machine      & Real device drivers (network, block, \ldots) \\
+UIO helper         & User-space (Linux)   & Bridges Linux drivers $\leftrightarrow$ sDDF rings \\
+sDDF               & Protocol + libraries & Shared-memory rings and notifications \\
+Console PD         & Protection Domain    & Early serial / console output \\
+Monitor PD         & Protection Domain    & Metrics, health, audit events \\
+Storage PD         & Protection Domain    & Block / SSD access (native or via Alpine) \\
+Network PD         & Protection Domain    & Ethernet access (native or via Alpine) \\
+\bottomrule
+\end{tabular}
+}
+\end{center}
+
+The dominant data and control paths are:
+
+\begin{itemize}
+  \item \textbf{Network}: NIC $\to$ Alpine driver $\to$ UIO helper $\to$ sDDF ring $\to$ Tyn $\to$ BEAM \texttt{gen\_tcp}/\texttt{Bandit};
+  \item \textbf{Storage}: SSD/block device $\to$ Storage path $\to$ sDDF $\to$ Tyn $\to$ BEAM file or ETS/Mnesia;
+  \item \textbf{Monitoring}: Tyn, VMM and driver PDs $\to$ notification + shared metrics region $\to$ Monitor PD;
+  \item \textbf{Console}: UART/virtio-console owned exclusively by the Console PD exposed to Tyn.
+\end{itemize}
+
+All authority is expressed by seL4 capabilities granted at system construction. There is no ambient authority.
+
+\subsection{seL4 Microkit Capabilities}
+\label{sec:microkit}
+
+Microkit provides a deliberately constrained component model on top of seL4:
+
+\begin{itemize}
+  \item \textbf{Protection Domains (PDs)} --- isolated, single-threaded components with fixed address spaces (maximum 63 PDs in a system);
+  \item \textbf{Memory Regions} --- explicitly mapped with read/write/execute rights into one or more PDs;
+  \item \textbf{Channels} --- point-to-point connections supporting asynchronous notifications and synchronous protected procedure calls;
+  \item \textbf{Virtual Machines} --- a PD may own at most one guest VM;
+  \item \textbf{MCS scheduling contexts} --- each PD receives a budget and period; core affinity is declared statically.
+\end{itemize}
+
+The system description is processed at build time. The resulting image contains a fixed capability layout; the Microkit initialiser installs these capabilities before any PD begins execution. Consequently, the set of resources each component may access is known a priori and can be audited against security policy (including selected NIST SP~800-53 families such as AC, SC and CM).
+
+Scheduling follows the seL4 Mixed-Criticality Scheduling (MCS) model. Typical priority ordering (highest to lowest) is:
+
+\begin{enumerate}
+  \item Console PD,
+  \item Tyn PD (hosting BEAM),
+  \item Monitor PD,
+  \item VMM / Alpine driver VM,
+  \item optional background domains.
+\end{enumerate}
+
+Core affinity and budget/period parameters are supplied via compile-time flags (\texttt{CORES}, \texttt{AFFINITY}, etc.)
+and emitted into the system description.
+
+\subsection{VMM Protection Domain}
+\label{sec:vmm}
+
+The VMM protection domain encapsulates the Linux driver environment so that complex device support does not enlarge the TCB under BEAM.
+
+\subsubsection{libvmm}
+\label{sec:libvmm}
+
+libvmm is the lightweight virtual-machine monitor library used by Microkit. It runs as an ordinary protection domain and is responsible for:
+
+\begin{itemize}
+  \item allocating guest physical memory,
+  \item establishing stage-2 translation,
+  \item injecting interrupts,
+  \item mediating hypercalls, and
+  \item granting the guest only those device registers and IRQs that policy permits.
+\end{itemize}
+
+The VMM itself holds only the capabilities necessary to manage its single guest; it cannot map arbitrary host memory or interfere with Tyn or other native PDs.
+
+\subsubsection{Alpine}
+\label{sec:alpine}
+
+Alpine Linux (musl-based, minimal) is chosen as the guest operating system for three reasons:
+small footprint, binary compatibility with the musl-linked OTP that Tyn expects,
+and straightforward packaging. A Buildroot- or minirootfs-derived image contains:
+
+\begin{itemize}
+  \item a stripped kernel configured for the target board and for UIO,
+  \item a minimal user-space (busybox, openrc or equivalent),
+  \item the UIO helper binary that maps sDDF rings and translates between Linux driver interfaces and the sDDF protocol.
+\end{itemize}
+
+Only the devices assigned to the guest appear in its device tree; all other hardware remains invisible.
+
+\subsubsection{Tyn}
+\label{sec:tyn}
+
+Tyn executes as a sibling protection domain to the VMM, not inside the Linux guest.
+It implements a deliberately narrow Linux-compatible system-call surface (approximately fifty calls)
+that a musl-linked OTP binary expects: memory management (\texttt{mmap}, \texttt{mprotect}, \ldots),
+threading and synchronisation (clone, futex family), time, basic file descriptors, and the in-memory
+VFS that holds the OTP release.
+
+Tyn never owns real device registers. All I/O is performed by mapping sDDF rings that are
+filled by either native driver PDs or by the UIO helper running inside Alpine.
+Consequently the trusted computing base that sits directly under BEAM consists solely of seL4 and Tyn.
+
+\subsubsection{BEAM}
+\label{sec:beam}
+
+An unmodified (or minimally patched) musl-linked OTP release is embedded as a
+cpio or tar archive inside the Tyn protection domain. At start-up Tyn locates
+the archive, constructs the necessary environment, and transfers control to \texttt{beam.smp}.
+From that point the ordinary OTP boot sequence proceeds: schedulers are started,
+applications are loaded, and supervision trees become active. BEAM continues to
+manage its own processes, message passing and distribution; seL4 only guarantees
+the CPU budget and memory isolation of the enclosing Tyn domain.
+
+\subsection{Monitor Protection Domain}
+\label{sec:monitor}
+
+The Monitor PD collects health and performance data from Tyn, the VMM and any native driver domains.
+Communication occurs through a combination of seL4 notifications and a shared metrics memory
+region whose layout is fixed at build time. The Monitor may:
+
+\begin{itemize}
+  \item expose counters and timestamps to an external observer,
+  \item generate audit-style events (supporting NIST AU-family controls),
+  \item detect liveness failures and signal higher-level recovery logic.
+\end{itemize}
+
+When the compile-time flag \texttt{MONITOR=0} is supplied the entire domain is omitted, further reducing image size and TCB.
+
+\subsection{Console Protection Domain}
+\label{sec:console}
+
+The Console PD owns the platform UART (or a virtio-console device) exclusively.
+It provides a narrow, character-oriented interface to Tyn for early boot messages,
+panic output and optional interactive debugging.
+Because the device registers reside only in the Console PD’s capability space,
+neither Tyn nor the Alpine guest can access them directly.
+The domain can be compiled to a write-only sink for production images.
+
+\subsection{Storage Protection Domain}
+\label{sec:storage}
+
+Storage may be realised in two ways, selected at image-construction time:
+
+\begin{itemize}
+  \item \textbf{Native sDDF block driver} --- a dedicated PD owns the block device registers
+        and IRQ and speaks the sDDF block protocol to Tyn;
+  \item \textbf{Alpine-mediated} --- the block device is passed through to the Linux guest;
+        the UIO helper translates Linux block I/O into sDDF rings.
+\end{itemize}
+
+In both cases Tyn presents a simple block or file-system abstraction to BEAM.
+The choice is expressed by the \texttt{STORAGE} build flag and the corresponding
+entries in the Microkit system description. Device ownership is exclusive:
+a given controller is never mapped into more than one domain.
+
+\subsection{Network Protection Domain}
+\label{sec:network}
+
+Analogously to storage, networking is provided either by a native sDDF Ethernet driver PD or by the Alpine guest.
+The data path is identical in structure:
+
+\begin{center}
+NIC $\to$ (native PD or Alpine + UIO) $\to$ sDDF ring $\to$ Tyn $\to$ BEAM socket layer.
+\end{center}
+
+Compile-time selection (\texttt{NET=1}) determines which implementation is linked into the final image.
+Core affinity for the network domain can be set independently so that packet processing does
+not perturb BEAM’s soft real-time behaviour.
+
+\section{Conclusion}
+\label{sec:conclusion}
+
+Tynse demonstrates that a production-grade, unmodified BEAM runtime can be hosted on the formally verified seL4
+microkernel with a dramatically reduced trusted computing base while still retaining practical access to complex
+devices. The architecture achieves this by:
+
+\begin{itemize}
+  \item confining the BEAM to a minimal syscall-trap host (Tyn) that runs as an ordinary seL4 protection domain;
+  \item isolating device drivers inside a capability-restricted Alpine Linux virtual machine (or native sDDF PDs);
+  \item mediating all inter-component communication through static, capability-controlled sDDF channels;
+  \item fixing scheduling parameters, core affinity and device ownership at image-construction time.
+\end{itemize}
+
+The resulting system is static, analysable, and naturally aligned with key NIST SP~800-53 control families.
+Future work includes completing native sDDF drivers for the Raspberry Pi platform, strengthening measurement
+and attestation support, and evaluating end-to-end performance and fault-isolation properties under realistic OTP workloads.
+
+\end{document}
