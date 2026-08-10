@@ -475,8 +475,8 @@ long tyn_syscall_dispatch(long sysno, long a1, long a2, long a3, long a4, long a
             } *u = (struct utsname_t *)a1;
             if (u) {
                 tyn_memset(u, 0, sizeof(*u));
-                tyn_strcpy(u->sysname, "synrc/hv");
-                tyn_strcpy(u->nodename, "");
+                tyn_strcpy(u->sysname, "sel4");
+                tyn_strcpy(u->nodename, "synrc");
                 tyn_strcpy(u->release, "0.7.0");
                 tyn_strcpy(u->version, "#1 SMP");
                 tyn_strcpy(u->machine, "aarch64");
