@@ -251,7 +251,7 @@ long tyn_syscall_dispatch(long sysno, long a1, long a2, long a3, long a4, long a
             return -1;
         }
 
-        case 66: { // SYS_writev
+        case SYS_writev: {
             int fd = (int)a1;
             if (fd == 0 || fd == 1 || fd == 2) {
                 struct iovec {
@@ -351,7 +351,7 @@ long tyn_syscall_dispatch(long sysno, long a1, long a2, long a3, long a4, long a
         case SYS_lstat:   // 1039 — unique on aarch64
             return 0;
 
-        case 79: { // SYS_fstatat / newfstatat (dirfd, path, stat, flags)
+        case SYS_fstatat: { // newfstatat (dirfd, path, stat, flags)
             const char *path = (const char *)a2;
             uint8_t *st = (uint8_t *)a3;
             if (!st) return -14; // EFAULT
@@ -372,7 +372,6 @@ long tyn_syscall_dispatch(long sysno, long a1, long a2, long a3, long a4, long a
                     for (int i = 0; i < 8; i++) { p[i] = (uint8_t)(sz & 0xFF); sz >>= 8; }
                 }
             } else {
-                // Not found
                 return -2; // ENOENT
             }
             return 0;
@@ -476,9 +475,9 @@ long tyn_syscall_dispatch(long sysno, long a1, long a2, long a3, long a4, long a
             } *u = (struct utsname_t *)a1;
             if (u) {
                 tyn_memset(u, 0, sizeof(*u));
-                tyn_strcpy(u->sysname, "Linux");
-                tyn_strcpy(u->nodename, "tyn");
-                tyn_strcpy(u->release, "5.10.0");
+                tyn_strcpy(u->sysname, "synrc/hv");
+                tyn_strcpy(u->nodename, "");
+                tyn_strcpy(u->release, "0.7.0");
                 tyn_strcpy(u->version, "#1 SMP");
                 tyn_strcpy(u->machine, "aarch64");
             }
@@ -674,13 +673,13 @@ long tyn_syscall_dispatch(long sysno, long a1, long a2, long a3, long a4, long a
         case SYS_clone:
             return -11; // EAGAIN — cannot create child process
 
-        case 23: // SYS_dup
-        case 24: // SYS_dup3
+        case SYS_dup: //
+        case SYS_dup3: //
             return -38; // ENOSYS
 
-        case 204: // SYS_getsockname
-        case 211: // SYS_sendmsg
-        case 212: // SYS_recvmsg
+        case SYS_getsockname: //
+        case SYS_sendmsg: //
+        case SYS_recvmsg: //
             return -38; // ENOSYS
 
         case SYS_wait4:
@@ -699,9 +698,7 @@ long tyn_syscall_dispatch(long sysno, long a1, long a2, long a3, long a4, long a
         case SYS_exit:
         case SYS_exit_group:
             microkit_dbg_puts("[synrc] BEAM runtime process exited.\n");
-            for (;;) {}
-
-
+            for (;;) {};
 
         default: {
             char dbg[32] = "[synrc] UNHANDLED SYSCALL: ";

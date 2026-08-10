@@ -6,6 +6,7 @@
 // AArch64 Linux syscall numbers (UAPI, same ABI as musl aarch64)
 #define SYS_read              63
 #define SYS_write             64
+#define SYS_writev            66
 #define SYS_close             57
 #define SYS_openat            56
 #define SYS_fstat             80
@@ -17,6 +18,7 @@
 #define SYS_tkill             130
 #define SYS_getdents64        61
 #define SYS_readlink          78
+#define SYS_fstatat           79
 #define SYS_brk               214
 #define SYS_mmap              222
 #define SYS_mprotect          226
@@ -54,10 +56,13 @@
 #define SYS_listen            201
 #define SYS_accept            202
 #define SYS_connect           203
+#define SYS_getsockname       204
 #define SYS_sendto            206
 #define SYS_recvfrom          207
 #define SYS_setsockopt        208
 #define SYS_getsockopt        209
+#define SYS_sendmsg           211
+#define SYS_recvmsg           212
 #define SYS_accept4           242
 // Process/signal extras
 #define SYS_wait4             260
@@ -67,6 +72,8 @@
 #define SYS_epoll_create1     20
 #define SYS_epoll_ctl         21
 #define SYS_epoll_wait        22
+#define SYS_dup               23
+#define SYS_dup3              24
 #define SYS_epoll_pwait       22  // alias
 #define SYS_eventfd2          19
 #define SYS_poll              73
