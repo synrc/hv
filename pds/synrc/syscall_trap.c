@@ -61,17 +61,10 @@ static inline void sys_unlock(void) {
 static inline void __attribute__((unused)) synrc_syscall_lock(void) {
     sys_lock();
 }
-
-static inline void __attribute__((unused)) synrc_syscall_unlock(void) {
-    sys_unlock();
-}
-
 static void get_fake_time(int64_t *sec, long *nsec) {
-    sys_lock();
     sys_state->fake_timer_nsec += 100000; // increment 100us per call
     *sec = (int64_t)(sys_state->fake_timer_nsec / 1000000000ULL);
     *nsec = (long)(sys_state->fake_timer_nsec % 1000000000ULL);
-    sys_unlock();
 }
 
 typedef struct {
@@ -799,8 +792,11 @@ static long do_syscall(long sysno, long a1, long a2, long a3, long a4, long a5, 
         case SYS_clock_gettime: {
             struct timespec { long tv_sec; long tv_nsec; } *ts = (void *)a2;
             if (ts) {
-                ts->tv_sec = 1600000000;
-                ts->tv_nsec = 0;
+                int64_t sec;
+                long nsec;
+                get_fake_time(&sec, &nsec);
+                ts->tv_sec = sec;
+                ts->tv_nsec = nsec;
             }
             return 0;
         }
@@ -815,7 +811,10 @@ static long do_syscall(long sysno, long a1, long a2, long a3, long a4, long a5, 
         }
 
         case SYS_timerfd_create: {
-            return -38; // ENOSYS
+            int flags = (int)a2;
+            int fd = fd_alloc((const vfs_file_t *)&sys_state->dev_pipe_file, 0);
+            if (fd >= 0) sys_state->fd_table[fd].nonblock = (flags & 04000) ? 1 : 0;
+            return fd;
         }
 
         case SYS_timerfd_settime:
