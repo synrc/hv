@@ -65,6 +65,7 @@ static const char *beam_argv[] = {
     "-SDio1",
     "-A1",
     "-a8192",
+    "-h", "10240",
     "--",
     "-root", "/otp",
     "-progname", "erl",
@@ -72,7 +73,7 @@ static const char *beam_argv[] = {
     "-boot", "/otp/bin/start",
     "-init_debug",
     "-noshell",
-    "-eval", "erlang:display(erlang:system_info(system_version)), erlang:display(hello_world), init:stop()",
+    "-eval", "erlang:display(hello_world), init:stop()",
     0
 };
 static const int beam_argc = (sizeof(beam_argv) / sizeof(beam_argv[0])) - 1;
