@@ -821,6 +821,9 @@ static long do_syscall(long sysno, long a1, long a2, long a3, long a4, long a5, 
             return fd;
         }
 
+        case SYS_timerfd_settime:
+            return 0;
+
         case SYS_gettimeofday: {
             tyn_timeval_t *tv = (tyn_timeval_t *)a1;
             if (tv) {
