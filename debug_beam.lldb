@@ -1,0 +1,7 @@
+target create build/otp29-aarch64/otp/bin/aarch64-unknown-linux-musl/beam.smp
+target modules load --file build/otp29-aarch64/otp/bin/aarch64-unknown-linux-musl/beam.smp -s 0x400000
+gdb-remote localhost:1234
+b erts_exit
+c
+bt
+quit

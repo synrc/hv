@@ -281,6 +281,9 @@ static long do_syscall(long sysno, long a1, long a2, long a3, long a4, long a5, 
             int fd = (int)a1;
             int cmd = (int)a2;
             long arg = a3;
+            if (fd == 0 || fd == 1 || fd == 2) {
+                return 0; // Fake success for stdin/stdout/stderr
+            }
             if (fd >= 3 && fd < FD_MAX && sys_state->fd_table[fd].used) {
                 if (cmd == 3) { // F_GETFL
                     return sys_state->fd_table[fd].nonblock ? 04000 : 0;
@@ -1048,17 +1051,48 @@ static long do_syscall(long sysno, long a1, long a2, long a3, long a4, long a5, 
         case 167: // SYS_prctl
             return 0;
 
-        case SYS_exit:
-            if (microkit_name[0] != 's') {
-                microkit_dbg_puts("[synrc] Worker thread finished execution.\n");
-                for (;;) { sel4_yield(); }
+        case SYS_exit: {
+            long code = a1;
+            char dbg[64];
+            // Poor man's sprintf
+            int i = 0;
+            dbg[i++] = '['; dbg[i++] = 's'; dbg[i++] = 'y'; dbg[i++] = 'n'; dbg[i++] = 'r'; dbg[i++] = 'c'; dbg[i++] = ']'; dbg[i++] = ' ';
+            dbg[i++] = 'B'; dbg[i++] = 'E'; dbg[i++] = 'A'; dbg[i++] = 'M'; dbg[i++] = ' '; dbg[i++] = 'e'; dbg[i++] = 'x'; dbg[i++] = 'i'; dbg[i++] = 't'; dbg[i++] = 'e'; dbg[i++] = 'd'; dbg[i++] = ' '; dbg[i++] = 'w'; dbg[i++] = 'i'; dbg[i++] = 't'; dbg[i++] = 'h'; dbg[i++] = ' '; dbg[i++] = 'c'; dbg[i++] = 'o'; dbg[i++] = 'd'; dbg[i++] = 'e'; dbg[i++] = ':'; dbg[i++] = ' ';
+            if (code == 0) dbg[i++] = '0';
+            else {
+                long temp = code < 0 ? -code : code;
+                if (code < 0) dbg[i++] = '-';
+                char buf[16];
+                int j = 0;
+                while (temp > 0) { buf[j++] = (temp % 10) + '0'; temp /= 10; }
+                while (j > 0) dbg[i++] = buf[--j];
             }
-            microkit_dbg_puts("[synrc] BEAM runtime main thread exited.\n");
-            for (;;) {};
+            dbg[i++] = '\n';
+            dbg[i++] = '\0';
+            microkit_dbg_puts(dbg);
+            for (;;) { sel4_yield(); }
+        }
 
-        case SYS_exit_group:
-            microkit_dbg_puts("[synrc] BEAM runtime process exited.\n");
-            for (;;) {};
+        case SYS_exit_group: {
+            long code = a1;
+            char dbg[64];
+            int i = 0;
+            dbg[i++] = '['; dbg[i++] = 's'; dbg[i++] = 'y'; dbg[i++] = 'n'; dbg[i++] = 'r'; dbg[i++] = 'c'; dbg[i++] = ']'; dbg[i++] = ' ';
+            dbg[i++] = 'B'; dbg[i++] = 'E'; dbg[i++] = 'A'; dbg[i++] = 'M'; dbg[i++] = ' '; dbg[i++] = 'g'; dbg[i++] = 'r'; dbg[i++] = 'o'; dbg[i++] = 'u'; dbg[i++] = 'p'; dbg[i++] = ' '; dbg[i++] = 'e'; dbg[i++] = 'x'; dbg[i++] = 'i'; dbg[i++] = 't'; dbg[i++] = 'e'; dbg[i++] = 'd'; dbg[i++] = ':'; dbg[i++] = ' ';
+            if (code == 0) dbg[i++] = '0';
+            else {
+                long temp = code < 0 ? -code : code;
+                if (code < 0) dbg[i++] = '-';
+                char buf[16];
+                int j = 0;
+                while (temp > 0) { buf[j++] = (temp % 10) + '0'; temp /= 10; }
+                while (j > 0) dbg[i++] = buf[--j];
+            }
+            dbg[i++] = '\n';
+            dbg[i++] = '\0';
+            microkit_dbg_puts(dbg);
+            for (;;) { sel4_yield(); }
+        }
 
         default: {
             char dbg[32] = "[synrc] UNHANDLED SYSCALL: ";

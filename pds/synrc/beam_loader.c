@@ -58,7 +58,7 @@ typedef struct {
 // -------------------------------------------------------------------------
 // argv[] for the real BEAM process (OTP 20 non-SMP flags)
 // -------------------------------------------------------------------------
-static char *beam_argv[] = {
+static const char *beam_argv[] = {
     "beam",
     "-S1:1",
     "-SDcpu1:1",
@@ -70,7 +70,9 @@ static char *beam_argv[] = {
     "-progname", "erl",
     "-home", "/",
     "-boot", "/otp/bin/start",
-    "-oldshell",
+    "-init_debug",
+    "-noshell",
+    "-eval", "erlang:display(erlang:system_info(system_version)), erlang:display(hello_world), init:stop()",
     0
 };
 static const int beam_argc = (sizeof(beam_argv) / sizeof(beam_argv[0])) - 1;

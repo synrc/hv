@@ -60,8 +60,7 @@ $(BUILD_DIR)/loader.img: $(BUILD_DIR)/hello.elf $(BUILD_DIR)/console.elf $(BUILD
 	  -o $@
 
 BEAM_ELF  = build/beam.aarch64.elf
-# Prefer OTP 20 rootfs (unversioned paths); fall back to original OTP 26 cpio
-BEAM_CPIO = $(or $(wildcard build/otp-rootfs-20.cpio),build/otp-rootfs.cpio)
+BEAM_CPIO = $(or $(wildcard build/otp-rootfs-29.cpio),build/otp-rootfs.cpio)
 
 # Option A: QEMU -device loader (default)
 # Loads beam.aarch64.elf at 0x50000000 and otp-rootfs.cpio at 0x54000000

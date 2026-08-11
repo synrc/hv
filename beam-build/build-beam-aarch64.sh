@@ -111,7 +111,7 @@ ac_cv_sizeof_off_t=8 \
 ac_cv_sizeof_long=8 \
 ERL_TOP="$BUILD_DIR/otp" \
 CC="$CROSS_GCC" \
-CFLAGS="-O2 -static -fcommon -Wno-error -Wno-unused-function" \
+CFLAGS="-O2 -static -fcommon -Wno-error -Wno-unused-function -DASSUMED_CACHE_LINE_SIZE=64 -DERTS_NO_RETPOLINE=" \
 LDFLAGS="-static" \
 ./configure \
     --host=aarch64-linux-musl \
@@ -122,7 +122,8 @@ LDFLAGS="-static" \
     --without-wx \
     --without-odbc \
     --without-javac \
-    --without-docs
+    --without-docs \
+    --disable-jit
 
 # Remove stale depend.mk files — a previously killed build can leave NUL bytes
 # that corrupt make's dependency parser on the next run.
