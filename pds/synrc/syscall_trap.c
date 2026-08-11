@@ -815,10 +815,7 @@ static long do_syscall(long sysno, long a1, long a2, long a3, long a4, long a5, 
         }
 
         case SYS_timerfd_create: {
-            int flags = (int)a2;
-            int fd = fd_alloc((const vfs_file_t *)&sys_state->dev_pipe_file, 0);
-            if (fd >= 0) sys_state->fd_table[fd].nonblock = (flags & 04000) ? 1 : 0;
-            return fd;
+            return -38; // ENOSYS
         }
 
         case SYS_timerfd_settime:
