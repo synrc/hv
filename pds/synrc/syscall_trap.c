@@ -67,6 +67,10 @@ static void get_fake_time(int64_t *sec, long *nsec) {
     *nsec = (long)(sys_state->fake_timer_nsec % 1000000000ULL);
 }
 
+static void advance_fake_time(uint64_t nsec) {
+    sys_state->fake_timer_nsec += nsec;
+}
+
 typedef struct {
     int64_t tv_sec;
     long    tv_nsec;
@@ -329,6 +333,18 @@ static long do_syscall(long sysno, long a1, long a2, long a3, long a4, long a5, 
             }
             return -25; // ENOTTY
         }
+        case SYS_set_tid_address: {
+            int *tidptr = (int *)a1;
+            uint64_t tls;
+            __asm__ volatile("mrs %0, tpidr_el0" : "=r"(tls));
+            struct mailbox_slot *mb = (struct mailbox_slot *)0x23000000;
+            for (int i = 0; i < 16; i++) {
+                if (mb[i].tls == tls && tls != 0) {
+                    return 1001 + i;
+                }
+            }
+            return 1000; // Main thread
+        }
         case SYS_futex: {
             int *uaddr = (int *)a1;
             int futex_op = (int)a2;
@@ -575,7 +591,7 @@ static long do_syscall(long sysno, long a1, long a2, long a3, long a4, long a5, 
         // ----------------------------------------------------------------
         case SYS_brk:
             if (a1 == 0) return (long)sys_state->heap_curr;
-            if ((uintptr_t)a1 > 0x31000000) return -12; // ENOMEM
+            if ((uintptr_t)a1 > 0x4F000000) return -12; // ENOMEM
             sys_state->heap_curr = (uintptr_t)a1;
             return (long)sys_state->heap_curr;
 
@@ -666,13 +682,22 @@ static long do_syscall(long sysno, long a1, long a2, long a3, long a4, long a5, 
         // Process / Thread
         // ----------------------------------------------------------------
         case SYS_getpid:
-            return 1;
+            return 1000;
 
         case SYS_getppid:
             return 0;
 
-        case SYS_gettid:
-            return 1;
+        case SYS_gettid: {
+            uint64_t tls;
+            __asm__ volatile("mrs %0, tpidr_el0" : "=r"(tls));
+            struct mailbox_slot *mb = (struct mailbox_slot *)0x23000000;
+            for (int i = 0; i < 16; i++) {
+                if (mb[i].tls == tls && tls != 0) {
+                    return 1001 + i;
+                }
+            }
+            return 1000; // Main thread
+        }
 
         case SYS_sched_yield:
             sel4_yield();
@@ -708,9 +733,6 @@ static long do_syscall(long sysno, long a1, long a2, long a3, long a4, long a5, 
             }
             return 0;
         }
-
-        case SYS_set_tid_address:
-            return 1;
 
         case SYS_prlimit64: {
             if (a4) {
@@ -810,12 +832,8 @@ static long do_syscall(long sysno, long a1, long a2, long a3, long a4, long a5, 
             return 0;
         }
 
-        case SYS_timerfd_create: {
-            int flags = (int)a2;
-            int fd = fd_alloc((const vfs_file_t *)&sys_state->dev_pipe_file, 0);
-            if (fd >= 0) sys_state->fd_table[fd].nonblock = (flags & 04000) ? 1 : 0;
-            return fd;
-        }
+        case SYS_timerfd_create:
+            return -38;
 
         case SYS_timerfd_settime:
             return 0;
@@ -1035,6 +1053,8 @@ static long do_syscall(long sysno, long a1, long a2, long a3, long a4, long a5, 
         case SYS_sendmsg: //
         case SYS_recvmsg: //
             return -38; // ENOSYS
+
+
 
         case SYS_wait4:
         case SYS_waitid:

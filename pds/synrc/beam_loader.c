@@ -66,6 +66,7 @@ static const char *beam_argv[] = {
     "-A1",
     "-a8192",
     "-h", "10240",
+    "-K", "false",
     "--",
     "-root", "/otp",
     "-progname", "erl",
