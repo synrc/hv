@@ -2,7 +2,7 @@
 
 MICROKIT_SDK ?= third_party/microkit-sdk-2.3.0
 BOARD        ?= qemu_virt_aarch64
-CONFIG       ?= debug
+CONFIG       ?= smp-debug
 SYSTEM       ?= synrc-beam
 TARGET       ?= aarch64-none-elf
 
@@ -45,7 +45,14 @@ $(BUILD_DIR)/synrc.elf: pds/synrc/synrc_main.c pds/synrc/syscall_trap.c pds/synr
 	$(CC) $(CFLAGS) -c pds/synrc/beam_emulator.c -o $(BUILD_DIR)/beam_emulator.o
 	$(LD) $(BUILD_DIR)/synrc_main.o $(BUILD_DIR)/syscall_trap.o $(BUILD_DIR)/vfs.o $(BUILD_DIR)/beam_loader.o $(BUILD_DIR)/beam_emulator.o $(LDFLAGS) -o $@
 
-$(BUILD_DIR)/loader.img: $(BUILD_DIR)/hello.elf $(BUILD_DIR)/console.elf $(BUILD_DIR)/monitor.elf $(BUILD_DIR)/synrc.elf systems/$(SYSTEM).system
+WORKER_ELFS = beam_sched.elf beam_dirty_cpu.elf beam_dirty_io.elf beam_poll.elf beam_rq_super.elf beam_aux.elf beam_worker6.elf beam_worker7.elf
+
+$(BUILD_DIR)/%.elf: pds/synrc/%.c $(BUILD_DIR)/vfs.o
+	@mkdir -p $(BUILD_DIR)
+	$(CC) $(CFLAGS) -c $< -o $(BUILD_DIR)/$*.o
+	$(LD) $(BUILD_DIR)/$*.o $(BUILD_DIR)/vfs.o $(LDFLAGS) -o $@
+
+$(BUILD_DIR)/loader.img: $(BUILD_DIR)/hello.elf $(BUILD_DIR)/console.elf $(BUILD_DIR)/monitor.elf $(BUILD_DIR)/synrc.elf $(patsubst %,$(BUILD_DIR)/%,$(WORKER_ELFS)) systems/$(SYSTEM).system
 	$(MICROKIT) systems/$(SYSTEM).system \
 	  --search-path $(BUILD_DIR) \
 	  --board $(BOARD) \
@@ -70,7 +77,8 @@ run: all
 	qemu-system-aarch64 \
 	  -machine virt,virtualization=on,gic-version=2 \
 	  -cpu cortex-a53 \
-	  -m 2048M \
+	  -m 4096M \
+	  -smp 4 \
 	  -nographic \
 	  -serial mon:stdio \
 	  -kernel $(BUILD_DIR)/loader.img \

@@ -22,9 +22,11 @@ typedef struct {
     char c_check[8];
 } cpio_newc_header_t;
 
+#include "syscall_trap.h"
+
 #define VFS_MAX_FILES 256
-static vfs_file_t vfs_index[VFS_MAX_FILES];
-static int vfs_file_count = 0;
+#define vfs_index (sys_state->vfs_index)
+#define vfs_file_count (sys_state->vfs_file_count)
 
 // Base address of the OTP rootfs cpio (mapped via tyn-beam.system otp_rootfs region)
 static const uint8_t *cpio_base = (const uint8_t *)0x54000000;

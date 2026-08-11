@@ -1,0 +1,24 @@
+--- otp/lib/crypto/c_src/crypto.c.orig
++++ otp/lib/crypto/c_src/crypto.c
+@@ -113,11 +113,11 @@
+ #endif
+ 
+ 
+-#ifndef HAS_LIBRESSL
++//#ifndef HAS_LIBRESSL
+ # if OPENSSL_VERSION_NUMBER >= PACKED_OPENSSL_VERSION_PLAIN(1,0,0)
+ #  define HAS_EVP_PKEY_CTX
+ # endif
+-#endif
++//#endif
+ 
+ 
+ #if OPENSSL_VERSION_NUMBER >= PACKED_OPENSSL_VERSION_PLAIN(1,0,0)
+@@ -188,7 +188,7 @@
+ /* If OPENSSL_NO_EC is set, there will be an error in ec.h included from engine.h
+    So if EC is disabled, you can't use Engine either....
+ */
+-# define HAS_ENGINE_SUPPORT
++// # define HAS_ENGINE_SUPPORT
+ #endif
+ 

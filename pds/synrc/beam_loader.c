@@ -5,7 +5,7 @@
 
 // Physical/virtual base for BEAM ELF image (mapped in tyn-beam.system)
 #define BEAM_ELF_BASE  ((const uint8_t *)0x50000000UL)
-#define BEAM_ELF_LIMIT (0x400000UL)
+#define BEAM_ELF_LIMIT (0x800000UL)  // 8 MB — OTP 29 text segment is ~6 MB
 
 // Stack for BEAM process (above the cpio region — 0x65000000)
 #define BEAM_STACK_BASE 0x65000000UL
@@ -60,17 +60,20 @@ typedef struct {
 // -------------------------------------------------------------------------
 static char *beam_argv[] = {
     "beam",
-    "-A", "0",       // no async thread pool (clone returns EAGAIN)
-    "-K", "false",   // disable kernel poll (epoll init crashes on null fn ptr)
-    "-c", "false",   // disable time correction
+    "-S1:1",
+    "-SDcpu1:1",
+    "-SDio1",
+    "-A1",
+    "-a8192",
     "--",
     "-root", "/otp",
     "-progname", "erl",
     "-home", "/",
     "-boot", "/otp/bin/start",
+    "-oldshell",
     0
 };
-static const int beam_argc = 16;
+static const int beam_argc = (sizeof(beam_argv) / sizeof(beam_argv[0])) - 1;
 
 // -------------------------------------------------------------------------
 // envp[] — BEAM's sys.c fatally exits without BINDIR/ROOTDIR/EMU
@@ -82,6 +85,7 @@ static char *beam_envp[] = {
     "HOME=/",
     "EMU=beam",
     "ERL_CRASH_DUMP=/dev/null",
+    "ERL_FLAGS=+MMscs 32 +Musac false",
     0
 };
 
@@ -131,7 +135,13 @@ static void elf_enter(uintptr_t entry, uintptr_t sp_base,
     // 1. argc
     *p++ = (uintptr_t)argc;
     // 2. argv[]
-    for (int i = 0; i < argc; i++) *p++ = (uintptr_t)argv[i];
+    microkit_dbg_puts("[synrc] BEAM ARGS:\n");
+    for (int i = 0; i < argc; i++) {
+        microkit_dbg_puts("  ");
+        microkit_dbg_puts(argv[i]);
+        microkit_dbg_puts("\n");
+        *p++ = (uintptr_t)argv[i];
+    }
     *p++ = 0; // NULL terminator for argv
     // 3. envp[]
     for (int i = 0; i < envc; i++) *p++ = (uintptr_t)envp[i];
@@ -160,7 +170,7 @@ static void elf_enter(uintptr_t entry, uintptr_t sp_base,
 // ELF loader + launch
 // -------------------------------------------------------------------------
 void beam_loader_start(void) {
-    microkit_dbg_puts("[synrc] Transferring execution to real BEAM executable (third_party/tyn/src/beam.smp.elf)...\n");
+    microkit_dbg_puts("[synrc] Transferring execution to real BEAM executable (beam.smp.elf)...\n");
 
     const uint8_t *elf = BEAM_ELF_BASE;
 
@@ -215,23 +225,27 @@ void beam_loader_start(void) {
             for (uintptr_t addr = ph->p_vaddr; addr < ph->p_vaddr + ph->p_filesz - 3; addr += 4) {
                 uint32_t *inst = (uint32_t *)addr;
                 if (*inst == 0xd4000001) {
-                    uint32_t *t = &trampoline_base[trampoline_index * 4];
+                    uint32_t *t = &trampoline_base[trampoline_index * 6];
                     
                     // 1. stp x30, x18, [sp, #-16]!
-                    t[0] = 0xa9bf4bfe; 
+                    t[0] = 0xa9bf4bfe;
                     
-                    // 2. bl tyn_syscall_entry
-                    int64_t offset = (int64_t)target - (int64_t)&t[1];
+                    // 2. mov x16, #0x08000000 (encoded as movz x16, #0x0800, lsl #16)
+                    t[1] = 0xd2a10010;
+                    
+                    // 3. ldr x16, [x16]
+                    t[2] = 0xf9400210;
+                    
+                    // 4. blr x16
+                    t[3] = 0xd63f0200;
+                    
+                    // 5. ldp x30, x18, [sp], #16
+                    t[4] = 0xa8c14bfe;
+                    
+                    // 6. b (addr + 4)
+                    int64_t offset = (int64_t)(addr + 4) - (int64_t)&t[5];
                     uint32_t imm26 = (offset >> 2) & 0x03FFFFFF;
-                    t[1] = 0x94000000 | imm26;
-                    
-                    // 3. ldp x30, x18, [sp], #16
-                    t[2] = 0xa8c14bfe;
-                    
-                    // 4. b (addr + 4)
-                    offset = (int64_t)(addr + 4) - (int64_t)&t[3];
-                    imm26 = (offset >> 2) & 0x03FFFFFF;
-                    t[3] = 0x14000000 | imm26;
+                    t[5] = 0x14000000 | imm26;
                     
                     // Replace svc #0 with b to trampoline
                     offset = (int64_t)t - (int64_t)addr;
@@ -262,6 +276,35 @@ void beam_loader_start(void) {
                 }
                 microkit_dbg_puts(" svc instructions!\n");
             }
+            // Scan for mov x16, x1 (0xaa0103f0) followed by br x16 (0xd61f0200)
+            int indirect_patch_count = 0;
+            for (uintptr_t addr = ph->p_vaddr; addr < ph->p_vaddr + ph->p_filesz - 7; addr += 4) {
+                uint32_t *inst = (uint32_t *)addr;
+                if (inst[0] == 0xaa0103f0 && inst[1] == 0xd61f0200) {
+                    inst[0] = 0xb9400030; // ldr w16, [x1]
+                    inst[1] = 0xb4000041; // cbz w16, #8 (jumps over br x1 if target is 0)
+                    inst[2] = 0xd61f0020; // br x1
+                    indirect_patch_count++;
+                }
+            }
+            if (indirect_patch_count > 0) {
+                microkit_dbg_puts("[synrc] Patched ");
+                int n = indirect_patch_count;
+                int i = 0;
+                char num[16];
+                if (n == 0) num[i++] = '0';
+                while (n > 0) {
+                    num[i++] = '0' + (n % 10);
+                    n /= 10;
+                }
+                char msg[2] = {0, 0};
+                while (i > 0) {
+                    msg[0] = num[i-1];
+                    microkit_dbg_puts(msg);
+                    i--;
+                }
+                microkit_dbg_puts(" indirect driver call sites!\n");
+            }
         }
     }
 
@@ -269,6 +312,13 @@ void beam_loader_start(void) {
     // Stack top aligned to 16 bytes per AArch64 ABI
     uintptr_t sp = (BEAM_STACK_BASE + BEAM_STACK_SIZE) & ~(uintptr_t)15;
 
-    microkit_dbg_puts("[synrc] ELF loader: jumping to BEAM entry point...\n");
+    // Flush cache across executable segments
+    for (uintptr_t p = 0x00400000; p < 0x00c00000; p += 64) {
+        __asm__ volatile("dc civac, %0" :: "r"(p) : "memory");
+        __asm__ volatile("ic ivau, %0" :: "r"(p) : "memory");
+    }
+    __asm__ volatile("dsb sy; isb" ::: "memory");
+
+    microkit_dbg_puts("[synrc] PD loader: jumping to entry point...\n");
     elf_enter(entry, sp, beam_argc, beam_argv, beam_envp);
 }

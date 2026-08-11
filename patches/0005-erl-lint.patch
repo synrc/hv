@@ -1,0 +1,26 @@
+--- otp/lib/stdlib/src/erl_lint.erl.orig
++++ otp/lib/stdlib/src/erl_lint.erl
+@@ -3877,7 +3877,7 @@
+     case args_list(As) of
+         true -> check_format_3(Fmt, As);
+         false -> {warn,1,"format arguments not a list",[]};
+-        maybe -> {warn,2,"format arguments perhaps not a list",[]}
++        'maybe' -> {warn,2,"format arguments perhaps not a list",[]}
+     end.
+ 
+ %% check_format_3(FormatString, [Arg]) -> ok | {warn,Level,Format,[Arg]}.
+@@ -3895,7 +3895,7 @@
+ args_list({cons,_L,_H,T}) -> args_list(T);
+ %% Strange case: user has written something like [a | "bcd"]; pretend
+ %% we don't know:
+-args_list({string,_L,_Cs}) -> maybe;
++args_list({string,_L,_Cs}) -> 'maybe';
+ args_list({nil,_L}) -> true;
+ args_list({atom,_,_}) -> false;
+ args_list({integer,_,_}) -> false;
+@@ -3902,4 +3902,4 @@
+-args_list(_Other) -> maybe.
++args_list(_Other) -> 'maybe'.
+ 
+ args_length({cons,_L,_H,T}) -> 1 + args_length(T);
+ args_length({nil,_L}) -> 0.

@@ -1,7 +1,47 @@
 #pragma once
 
+#include <microkit.h>
 #include <stdint.h>
 #include <stddef.h>
+#include "vfs.h"
+
+#define FD_MAX 64
+
+#define sys_state ((volatile sys_state_t *)0x22000000)
+
+typedef struct {
+    const vfs_file_t *file;
+    size_t offset;
+    int    used;
+    int    nonblock;
+    char   dir_path[128];
+} fd_entry_t;
+
+typedef struct {
+    int lock; // Spinlock
+    uintptr_t heap_curr;
+    uintptr_t mmap_curr;
+    uintptr_t mmap_jit_curr;
+    uint32_t  trampoline_index;
+    uint64_t fake_timer_nsec;
+    int vfs_file_count;
+    vfs_file_t dev_null_file;
+    vfs_file_t dev_dir_file;
+    vfs_file_t dev_pipe_file;
+    vfs_file_t vfs_index[256];
+    fd_entry_t fd_table[FD_MAX];
+} sys_state_t;
+
+struct mailbox_slot {
+    void *(*start_routine)(void *);
+    void *arg;
+    void *retval;
+    int active;
+    uint64_t tls;
+    void *child_stack;
+};
+
+extern void tyn_syscall_entry(void);
 
 // AArch64 Linux syscall numbers (UAPI, same ABI as musl aarch64)
 #define SYS_read              63
@@ -38,7 +78,9 @@
 #define SYS_rt_sigaction      134
 #define SYS_tgkill            131
 #define SYS_ioctl             29
+#define SYS_sched_setaffinity 122
 #define SYS_sched_getaffinity 123
+#define SYS_sched_yield       124
 #define SYS_uname             160
 #define SYS_exit              93
 #define SYS_exit_group        94
@@ -76,13 +118,16 @@
 #define SYS_dup3              24
 #define SYS_epoll_pwait       22  // alias
 #define SYS_eventfd2          19
+#define SYS_timerfd_create    85
+#define SYS_timerfd_settime   86
+#define SYS_timerfd_gettime   87
+#define SYS_clock_getres      114
 #define SYS_poll              73
 #define SYS_ppoll             73  // alias
 #define SYS_select            1038
 #define SYS_pselect6          72
 
-void tyn_syscall_init(void);
-long tyn_syscall_dispatch(long sysno, long a1, long a2, long a3, long a4, long a5, long a6);
+#define SYS_synrc_spawn       1000
 
 void tyn_syscall_init(void);
 long tyn_syscall_dispatch(long sysno, long a1, long a2, long a3, long a4, long a5, long a6);
