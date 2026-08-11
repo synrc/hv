@@ -333,13 +333,12 @@ static long do_syscall(long sysno, long a1, long a2, long a3, long a4, long a5, 
             }
             return -25; // ENOTTY
         }
-        case SYS_set_tid_address: {
-            int *tidptr = (int *)a1;
+       case SYS_set_tid_address: {
+            (void)a1;
             uint64_t tls;
             __asm__ volatile("mrs %0, tpidr_el0" : "=r"(tls));
-            struct mailbox_slot *mb = (struct mailbox_slot *)0x23000000;
             for (int i = 0; i < 16; i++) {
-                if (mb[i].tls == tls && tls != 0) {
+                if (mailbox[i].tls == tls && tls != 0) {
                     return 1001 + i;
                 }
             }
@@ -690,15 +689,13 @@ static long do_syscall(long sysno, long a1, long a2, long a3, long a4, long a5, 
         case SYS_gettid: {
             uint64_t tls;
             __asm__ volatile("mrs %0, tpidr_el0" : "=r"(tls));
-            struct mailbox_slot *mb = (struct mailbox_slot *)0x23000000;
             for (int i = 0; i < 16; i++) {
-                if (mb[i].tls == tls && tls != 0) {
+                if (mailbox[i].tls == tls && tls != 0) {
                     return 1001 + i;
                 }
             }
             return 1000; // Main thread
         }
-
         case SYS_sched_yield:
             sel4_yield();
             return 0;
