@@ -218,7 +218,7 @@ void beam_loader_start(void) {
         if (ph->p_flags & PF_X) {
             uint32_t *trampoline_base = (uint32_t *)0x6F0000;
             int trampoline_index = 0;
-            uintptr_t target = (uintptr_t)&tyn_syscall_entry;
+
             int patch_count = 0;
             
             // It's an executable segment. Scan for svc #0 (0xd4000001)
@@ -281,9 +281,19 @@ void beam_loader_start(void) {
             for (uintptr_t addr = ph->p_vaddr; addr < ph->p_vaddr + ph->p_filesz - 7; addr += 4) {
                 uint32_t *inst = (uint32_t *)addr;
                 if (inst[0] == 0xaa0103f0 && inst[1] == 0xd61f0200) {
-                    inst[0] = 0xb9400030; // ldr w16, [x1]
-                    inst[1] = 0xb4000041; // cbz w16, #8 (jumps over br x1 if target is 0)
-                    inst[2] = 0xd61f0020; // br x1
+                    uint32_t *t = &trampoline_base[trampoline_index * 6];
+                    
+                    t[0] = 0xb9400030; // ldr w16, [x1]
+                    t[1] = 0xb4000050; // cbz w16, #8 (jumps to t[3])
+                    t[2] = 0xd61f0020; // br x1
+                    t[3] = 0xd65f03c0; // ret
+                    
+                    int64_t offset = (int64_t)t - (int64_t)inst;
+                    uint32_t imm26 = (offset >> 2) & 0x03FFFFFF;
+                    inst[0] = 0x14000000 | imm26; // b trampoline
+                    inst[1] = 0xd503201f;         // nop
+                    
+                    trampoline_index++;
                     indirect_patch_count++;
                 }
             }

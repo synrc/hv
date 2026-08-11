@@ -58,11 +58,11 @@ static inline void sys_unlock(void) {
     __atomic_clear(&sys_state->lock, __ATOMIC_RELEASE);
 }
 
-static inline void synrc_syscall_lock(void) {
+static inline void __attribute__((unused)) synrc_syscall_lock(void) {
     sys_lock();
 }
 
-static inline void synrc_syscall_unlock(void) {
+static inline void __attribute__((unused)) synrc_syscall_unlock(void) {
     sys_unlock();
 }
 
@@ -167,7 +167,7 @@ static int fd_alloc(const vfs_file_t *f, const char *dir_path) {
             sys_state->fd_table[i].offset = 0;
             sys_state->fd_table[i].nonblock = 0;
             if (dir_path) {
-                tyn_strncpy(sys_state->fd_table[i].dir_path, dir_path, 128);
+                tyn_strncpy((char *)sys_state->fd_table[i].dir_path, dir_path, 128);
             } else {
                 sys_state->fd_table[i].dir_path[0] = '\0';
             }
@@ -267,8 +267,8 @@ static long do_syscall(long sysno, long a1, long a2, long a3, long a4, long a5, 
         case SYS_pipe2: {
             int *pipefd = (int *)a1;
             int flags = (int)a2; // O_NONBLOCK is 04000
-            int fd0 = fd_alloc(&sys_state->dev_pipe_file, 0);
-            int fd1 = fd_alloc(&sys_state->dev_pipe_file, 0);
+            int fd0 = fd_alloc((const vfs_file_t *)&sys_state->dev_pipe_file, 0);
+            int fd1 = fd_alloc((const vfs_file_t *)&sys_state->dev_pipe_file, 0);
             if (fd0 < 0 || fd1 < 0) return -1;
             sys_state->fd_table[fd0].nonblock = (flags & 04000) ? 1 : 0;
             sys_state->fd_table[fd1].nonblock = (flags & 04000) ? 1 : 0;
@@ -362,7 +362,7 @@ static long do_syscall(long sysno, long a1, long a2, long a3, long a4, long a5, 
                 return (long)c;
             }
             if (fd >= 3 && fd < FD_MAX && sys_state->fd_table[fd].used) {
-                fd_entry_t *e = &sys_state->fd_table[fd];
+                fd_entry_t *e = (fd_entry_t *)&sys_state->fd_table[fd];
                 if (e->file == &sys_state->dev_pipe_file) {
                     if (e->nonblock) {
                         return -11; // EAGAIN
@@ -454,7 +454,7 @@ static long do_syscall(long sysno, long a1, long a2, long a3, long a4, long a5, 
             const char *path = (const char *)a2;
             const vfs_file_t *f = 0;
             if (streq(path, "/dev/null")) {
-                f = &sys_state->dev_null_file;
+                f = (const vfs_file_t *)&sys_state->dev_null_file;
             } else {
                 f = vfs_lookup(path);
             }
@@ -475,7 +475,7 @@ static long do_syscall(long sysno, long a1, long a2, long a3, long a4, long a5, 
             long offset = a2;
             int whence = (int)a3;
             if (fd >= 3 && fd < FD_MAX && sys_state->fd_table[fd].used) {
-                fd_entry_t *e = &sys_state->fd_table[fd];
+                fd_entry_t *e = (fd_entry_t *)&sys_state->fd_table[fd];
                 size_t new_off;
                 if (whence == 0 /* SEEK_SET */) new_off = (size_t)offset;
                 else if (whence == 1 /* SEEK_CUR */) new_off = e->offset + (size_t)offset;
@@ -553,7 +553,7 @@ static long do_syscall(long sysno, long a1, long a2, long a3, long a4, long a5, 
 
             if (fd >= 3 && fd < FD_MAX && sys_state->fd_table[fd].used) {
                 if (sys_state->fd_table[fd].dir_path[0] != '\0') {
-                    int res = vfs_getdents(sys_state->fd_table[fd].dir_path, buf, count, &sys_state->fd_table[fd].offset);
+                    int res = vfs_getdents((const char *)sys_state->fd_table[fd].dir_path, buf, count, (size_t *)&sys_state->fd_table[fd].offset);
                     if (res >= 0) return res;
                 }
                 return 0; // Not a directory or empty
@@ -783,7 +783,7 @@ static long do_syscall(long sysno, long a1, long a2, long a3, long a4, long a5, 
             int fd = (int)a1;
             int flags = (int)a4;
             if (fd == -1) {
-                int new_fd = fd_alloc(&sys_state->dev_pipe_file, 0);
+                int new_fd = fd_alloc((const vfs_file_t *)&sys_state->dev_pipe_file, 0);
                 if (new_fd >= 0) sys_state->fd_table[new_fd].nonblock = (flags & 04000) ? 1 : 0;
                 return new_fd;
             }
@@ -813,7 +813,7 @@ static long do_syscall(long sysno, long a1, long a2, long a3, long a4, long a5, 
 
         case SYS_timerfd_create: {
             int flags = (int)a2;
-            int fd = fd_alloc(&sys_state->dev_pipe_file, 0);
+            int fd = fd_alloc((const vfs_file_t *)&sys_state->dev_pipe_file, 0);
             if (fd >= 0) sys_state->fd_table[fd].nonblock = (flags & 04000) ? 1 : 0;
             return fd;
         }
@@ -849,8 +849,8 @@ static long do_syscall(long sysno, long a1, long a2, long a3, long a4, long a5, 
         case SYS_socketpair: {
             int *fds = (int *)a4;
             if (!fds) return -22; // EINVAL
-            int fd0 = fd_alloc(&sys_state->dev_null_file, 0);
-            int fd1 = fd_alloc(&sys_state->dev_null_file, 0);
+            int fd0 = fd_alloc((const vfs_file_t *)&sys_state->dev_null_file, 0);
+            int fd1 = fd_alloc((const vfs_file_t *)&sys_state->dev_null_file, 0);
             if (fd0 < 0 || fd1 < 0) return -24; // EMFILE
             fds[0] = fd0;
             fds[1] = fd1;
@@ -858,7 +858,7 @@ static long do_syscall(long sysno, long a1, long a2, long a3, long a4, long a5, 
         }
 
         case SYS_socket:
-            return fd_alloc(&sys_state->dev_null_file, 0);
+            return fd_alloc((const vfs_file_t *)&sys_state->dev_null_file, 0);
 
         case SYS_bind:
         case SYS_listen:
@@ -891,7 +891,7 @@ static long do_syscall(long sysno, long a1, long a2, long a3, long a4, long a5, 
         // I/O multiplexing
         // ----------------------------------------------------------------
         case SYS_epoll_create1:
-            return fd_alloc(&sys_state->dev_null_file, 0);
+            return fd_alloc((const vfs_file_t *)&sys_state->dev_null_file, 0);
 
         case SYS_epoll_ctl:
             return 0;
@@ -942,7 +942,7 @@ static long do_syscall(long sysno, long a1, long a2, long a3, long a4, long a5, 
 
         case SYS_eventfd2: {
             int flags = (int)a2;
-            int fd = fd_alloc(&sys_state->dev_pipe_file, 0);
+            int fd = fd_alloc((const vfs_file_t *)&sys_state->dev_pipe_file, 0);
             if (fd >= 0) sys_state->fd_table[fd].nonblock = (flags & 04000) ? 1 : 0;
             return fd;
         }

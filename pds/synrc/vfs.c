@@ -150,7 +150,7 @@ const vfs_file_t *vfs_lookup(const char *path) {
     for (int i = 0; i < vfs_file_count; i++) {
         const char *p = vfs_index[i].path;
         if (str_eq(match_path, p)) {
-            return &vfs_index[i];
+            return (const vfs_file_t *)&vfs_index[i];
         }
         // Check if match_path is a directory prefix
         // i.e. p starts with match_path + "/"
