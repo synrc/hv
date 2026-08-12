@@ -469,7 +469,12 @@ static long do_syscall(long sysno, long a1, long a2, long a3, long a4, long a5, 
             } else {
                 f = vfs_lookup(path);
             }
-            if (!f) return -2; // ENOENT
+            if (!f) {
+                microkit_dbg_puts("[synrc] SYS_openat ENOENT path: ");
+                if (path) microkit_dbg_puts(path);
+                microkit_dbg_puts("\n");
+                return -2; // ENOENT
+            }
             const char *dp = (f == &sys_state->dev_dir_file) ? path : 0;
             int fd = fd_alloc(f, dp);
             return fd < 0 ? -24 : (long)fd; // EMFILE
@@ -908,9 +913,11 @@ static long do_syscall(long sysno, long a1, long a2, long a3, long a4, long a5, 
         // I/O multiplexing
         // ----------------------------------------------------------------
         case SYS_epoll_create1:
+            microkit_dbg_puts("[synrc] SYS_epoll_create1 called\n");
             return fd_alloc((const vfs_file_t *)&sys_state->dev_null_file, 0);
 
         case SYS_epoll_ctl:
+            microkit_dbg_puts("[synrc] SYS_epoll_ctl called\n");
             return 0;
 
         case SYS_epoll_wait: {

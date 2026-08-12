@@ -32,7 +32,7 @@
 			-> CSpace: 'cnode_beam_aux_root'
 			-> VSpace: 'pud_beam_aux'
 			-> IPC Buffer: 'frame_ipcbuf_beam_aux'
-			-> Fault Endpoint: 'ep_fault_monitor'
+			-> Fault Endpoint: 'ep_synrc'
 			-> Scheduling Context: 'sched_context_beam_aux'
 			-> Notification: 'ntfn_beam_aux'
 
@@ -46,7 +46,7 @@
 			-> CSpace: 'cnode_beam_dirty_cpu_root'
 			-> VSpace: 'pud_beam_dirty_cpu'
 			-> IPC Buffer: 'frame_ipcbuf_beam_dirty_cpu'
-			-> Fault Endpoint: 'ep_fault_monitor'
+			-> Fault Endpoint: 'ep_synrc'
 			-> Scheduling Context: 'sched_context_beam_dirty_cpu'
 			-> Notification: 'ntfn_beam_dirty_cpu'
 
@@ -60,7 +60,7 @@
 			-> CSpace: 'cnode_beam_dirty_io_root'
 			-> VSpace: 'pud_beam_dirty_io'
 			-> IPC Buffer: 'frame_ipcbuf_beam_dirty_io'
-			-> Fault Endpoint: 'ep_fault_monitor'
+			-> Fault Endpoint: 'ep_synrc'
 			-> Scheduling Context: 'sched_context_beam_dirty_io'
 			-> Notification: 'ntfn_beam_dirty_io'
 
@@ -74,7 +74,7 @@
 			-> CSpace: 'cnode_beam_poll_root'
 			-> VSpace: 'pud_beam_poll'
 			-> IPC Buffer: 'frame_ipcbuf_beam_poll'
-			-> Fault Endpoint: 'ep_fault_monitor'
+			-> Fault Endpoint: 'ep_synrc'
 			-> Scheduling Context: 'sched_context_beam_poll'
 			-> Notification: 'ntfn_beam_poll'
 
@@ -88,7 +88,7 @@
 			-> CSpace: 'cnode_beam_rq_super_root'
 			-> VSpace: 'pud_beam_rq_super'
 			-> IPC Buffer: 'frame_ipcbuf_beam_rq_super'
-			-> Fault Endpoint: 'ep_fault_monitor'
+			-> Fault Endpoint: 'ep_synrc'
 			-> Scheduling Context: 'sched_context_beam_rq_super'
 			-> Notification: 'ntfn_beam_rq_super'
 
@@ -102,7 +102,7 @@
 			-> CSpace: 'cnode_beam_sched_root'
 			-> VSpace: 'pud_beam_sched'
 			-> IPC Buffer: 'frame_ipcbuf_beam_sched'
-			-> Fault Endpoint: 'ep_fault_monitor'
+			-> Fault Endpoint: 'ep_synrc'
 			-> Scheduling Context: 'sched_context_beam_sched'
 			-> Notification: 'ntfn_beam_sched'
 
@@ -116,7 +116,7 @@
 			-> CSpace: 'cnode_beam_worker6_root'
 			-> VSpace: 'pud_beam_worker6'
 			-> IPC Buffer: 'frame_ipcbuf_beam_worker6'
-			-> Fault Endpoint: 'ep_fault_monitor'
+			-> Fault Endpoint: 'ep_synrc'
 			-> Scheduling Context: 'sched_context_beam_worker6'
 			-> Notification: 'ntfn_beam_worker6'
 
@@ -130,7 +130,7 @@
 			-> CSpace: 'cnode_beam_worker7_root'
 			-> VSpace: 'pud_beam_worker7'
 			-> IPC Buffer: 'frame_ipcbuf_beam_worker7'
-			-> Fault Endpoint: 'ep_fault_monitor'
+			-> Fault Endpoint: 'ep_synrc'
 			-> Scheduling Context: 'sched_context_beam_worker7'
 			-> Notification: 'ntfn_beam_worker7'
 
@@ -200,9 +200,9 @@
 			-> Rights: Read, Write
 			-> Badge: 0x0
 		* Slot: 2
-			-> Object: 'ep_fault_monitor'
+			-> Object: 'ep_synrc'
 			-> Rights: Read, Write, Grant
-			-> Badge: 0x9
+			-> Badge: 0x4000000000000006
 		* Slot: 3
 			-> Object: 'pud_beam_aux'
 		* Slot: 4
@@ -218,9 +218,9 @@
 			-> Rights: Read, Write
 			-> Badge: 0x0
 		* Slot: 2
-			-> Object: 'ep_fault_monitor'
+			-> Object: 'ep_synrc'
 			-> Rights: Read, Write, Grant
-			-> Badge: 0x5
+			-> Badge: 0x4000000000000002
 		* Slot: 3
 			-> Object: 'pud_beam_dirty_cpu'
 		* Slot: 4
@@ -236,9 +236,9 @@
 			-> Rights: Read, Write
 			-> Badge: 0x0
 		* Slot: 2
-			-> Object: 'ep_fault_monitor'
+			-> Object: 'ep_synrc'
 			-> Rights: Read, Write, Grant
-			-> Badge: 0x6
+			-> Badge: 0x4000000000000003
 		* Slot: 3
 			-> Object: 'pud_beam_dirty_io'
 		* Slot: 4
@@ -254,9 +254,9 @@
 			-> Rights: Read, Write
 			-> Badge: 0x0
 		* Slot: 2
-			-> Object: 'ep_fault_monitor'
+			-> Object: 'ep_synrc'
 			-> Rights: Read, Write, Grant
-			-> Badge: 0x7
+			-> Badge: 0x4000000000000004
 		* Slot: 3
 			-> Object: 'pud_beam_poll'
 		* Slot: 4
@@ -272,9 +272,9 @@
 			-> Rights: Read, Write
 			-> Badge: 0x0
 		* Slot: 2
-			-> Object: 'ep_fault_monitor'
+			-> Object: 'ep_synrc'
 			-> Rights: Read, Write, Grant
-			-> Badge: 0x8
+			-> Badge: 0x4000000000000005
 		* Slot: 3
 			-> Object: 'pud_beam_rq_super'
 		* Slot: 4
@@ -290,9 +290,9 @@
 			-> Rights: Read, Write
 			-> Badge: 0x0
 		* Slot: 2
-			-> Object: 'ep_fault_monitor'
+			-> Object: 'ep_synrc'
 			-> Rights: Read, Write, Grant
-			-> Badge: 0x4
+			-> Badge: 0x4000000000000001
 		* Slot: 3
 			-> Object: 'pud_beam_sched'
 		* Slot: 4
@@ -308,9 +308,9 @@
 			-> Rights: Read, Write
 			-> Badge: 0x0
 		* Slot: 2
-			-> Object: 'ep_fault_monitor'
+			-> Object: 'ep_synrc'
 			-> Rights: Read, Write, Grant
-			-> Badge: 0xa
+			-> Badge: 0x4000000000000007
 		* Slot: 3
 			-> Object: 'pud_beam_worker6'
 		* Slot: 4
@@ -326,9 +326,9 @@
 			-> Rights: Read, Write
 			-> Badge: 0x0
 		* Slot: 2
-			-> Object: 'ep_fault_monitor'
+			-> Object: 'ep_synrc'
 			-> Rights: Read, Write, Grant
-			-> Badge: 0xb
+			-> Badge: 0x4000000000000008
 		* Slot: 3
 			-> Object: 'pud_beam_worker7'
 		* Slot: 4
@@ -390,8 +390,8 @@
 
 	- CNode: 'cnode_synrc'
 		* Slot: 1
-			-> Object: 'ntfn_synrc'
-			-> Rights: Read, Write
+			-> Object: 'ep_synrc'
+			-> Rights: Read, Write, Grant
 			-> Badge: 0x0
 		* Slot: 2
 			-> Object: 'ep_fault_monitor'
@@ -441,6 +441,22 @@
 			-> Object: 'ntfn_beam_worker7'
 			-> Rights: Read, Write
 			-> Badge: 0x2
+		* Slot: 203
+			-> Object: 'tcb_beam_sched'
+		* Slot: 204
+			-> Object: 'tcb_beam_dirty_cpu'
+		* Slot: 205
+			-> Object: 'tcb_beam_dirty_io'
+		* Slot: 206
+			-> Object: 'tcb_beam_poll'
+		* Slot: 207
+			-> Object: 'tcb_beam_rq_super'
+		* Slot: 208
+			-> Object: 'tcb_beam_aux'
+		* Slot: 209
+			-> Object: 'tcb_beam_worker6'
+		* Slot: 210
+			-> Object: 'tcb_beam_worker7'
 
 	- CNode: 'cnode_audit_monitor_root'
 		* Slot: 0
@@ -11883,3 +11899,4 @@
 	11390 - Reply: 'reply_monitor' @ 0x000091ac5800
 	11391 - Reply: 'reply_synrc' @ 0x000091ac5820
 	11392 - Endpoint: 'ep_fault_monitor' @ 0x000091ac5840
+	11393 - Endpoint: 'ep_synrc' @ 0x000091ac5850
