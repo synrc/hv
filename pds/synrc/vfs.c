@@ -143,6 +143,15 @@ void vfs_init(void) {
     num[pos] = '\0';
     microkit_dbg_puts(num);
     microkit_dbg_puts(" files indexed\n");
+    for (int i = 0; i < vfs_file_count; i++) {
+        const char *p = vfs_index[i].path;
+        if ((p[0]=='o' && p[1]=='t' && p[2]=='p' && p[3]=='/' && p[4]=='b' && p[5]=='i' && p[6]=='n') ||
+            (p[0]=='s' && p[1]=='t' && p[2]=='a' && p[3]=='r' && p[4]=='t')) {
+            microkit_dbg_puts("[cpio-match] ");
+            microkit_dbg_puts(p);
+            microkit_dbg_puts("\n");
+        }
+    }
 }
 
 
@@ -159,6 +168,9 @@ const vfs_file_t *vfs_lookup(const char *path) {
         for (int i = 0; i < vfs_file_count; i++) {
             const char *p = vfs_index[i].path;
             if (str_eq(match_path, p)) {
+                microkit_dbg_puts("[vfs] Lookup file: ");
+                microkit_dbg_puts(p);
+                microkit_dbg_puts("\n");
                 return (const vfs_file_t *)&vfs_index[i];
             }
             // Check if match_path is a directory prefix
@@ -175,6 +187,29 @@ const vfs_file_t *vfs_lookup(const char *path) {
     
     if (is_dir) return &sys_state->dev_dir_file;
     return NULL;
+}
+
+static uint8_t dynamic_vfs_buffers[16][65536];
+static char dynamic_vfs_paths[16][128];
+static int dynamic_vfs_count = 0;
+
+const vfs_file_t *vfs_create_file(const char *path) {
+    if (!path || vfs_file_count >= VFS_MAX_FILES || dynamic_vfs_count >= 16) return NULL;
+    const vfs_file_t *existing = vfs_lookup(path);
+    if (existing && existing != &sys_state->dev_dir_file) return existing;
+
+    int idx = dynamic_vfs_count++;
+    const char *p = (path[0] == '/') ? path + 1 : path;
+    size_t l = str_len(p);
+    if (l >= 127) l = 127;
+    for (size_t i = 0; i < l; i++) dynamic_vfs_paths[idx][i] = p[i];
+    dynamic_vfs_paths[idx][l] = '\0';
+
+    int slot = vfs_file_count++;
+    vfs_index[slot].path = dynamic_vfs_paths[idx];
+    vfs_index[slot].data = dynamic_vfs_buffers[idx];
+    vfs_index[slot].size = 0;
+    return (const vfs_file_t *)&vfs_index[slot];
 }
 
 int vfs_getdents(const char *dir_path, uint8_t *buf, size_t count, size_t *offset_ptr) {

@@ -15,7 +15,12 @@ void init(void) {
 }
 
 void notified(microkit_channel ch) {
-    (void)ch;
+    if (ch == 1) {
+        // Console input arrived! Notify all worker channels so waiting scheduler/poll threads wake up
+        for (int c = 3; c <= 10; c++) {
+            microkit_notify(c);
+        }
+    }
     uint32_t target_ch = sys_state->pending_notify;
     if (target_ch != 0) {
         sys_state->pending_notify = 0;

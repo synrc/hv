@@ -53,6 +53,7 @@ main([StagingDir, AppsConfig]) ->
       ++ [{progress, modules_loaded}] ++ Paths ++ [
         {kernelProcess, error_logger, {error_logger, start_link, []}},
         {kernelProcess, application_controller, {application_controller, start, [{application, kernel, KernelOpts}]}},
+        {kernelProcess, user, {user, start, []}},
         {progress, init_kernel_started},
         {apply, {application, load, [{application, stdlib, StdlibOpts}]}}
     ] ++ lists:flatten([
@@ -61,7 +62,7 @@ main([StagingDir, AppsConfig]) ->
         {progress, applications_loaded},
         {apply, {erlang, display, [<<"HELLO FROM OS.1 BEAM SE-L4 MICROKIT BOOTLOADER! BOOT SUCCESSFUL!">>]} }
     ] ++ lists:flatten([
-        [{apply, {application, start_boot, [App, permanent]}} || {App, _} <- AppsData]
+        [{apply, {application, start_boot, [App, permanent]}} || App <- [kernel, stdlib]]
     ]) ++ [
         {apply, {c, erlangrc, []}},
         {progress, started}

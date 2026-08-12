@@ -60,20 +60,17 @@ typedef struct {
 // -------------------------------------------------------------------------
 static const char *beam_argv[] = {
     "beam",
+    "--",
     "-S1:1",
     "-SDcpu1:1",
     "-SDio1",
     "-A1",
-    "-a8192",
     "-h", "10240",
     "-K", "false",
-    "--",
     "-root", "/otp",
     "-progname", "erl",
     "-home", "/",
     "-boot", "/otp/bin/start",
-    "-init_debug",
-    "-oldshell",
     0
 };
 static const int beam_argc = (sizeof(beam_argv) / sizeof(beam_argv[0])) - 1;
