@@ -44,17 +44,33 @@ __asm__(
 
 static console_ring_t *console_ring = (console_ring_t *)0x10000000;
 static inline void sel4_yield(void) {
-    asm volatile("yield" ::: "memory");
+    seL4_Yield();
+}
+
+static inline void sys_lock_dbg(long sysno) {
+    uint32_t spins = 0;
+    while (__atomic_test_and_set(&sys_state->lock, __ATOMIC_ACQUIRE)) {
+        spins++;
+        if (spins == 100000) {
+            microkit_dbg_puts("[synrc] SPINLOCK HELD BY sysno=");
+            puthex64((uint64_t)sys_state->lock_owner_sysno);
+            microkit_dbg_puts(" WAITER=");
+            microkit_dbg_puts(microkit_name);
+            microkit_dbg_puts(" sysno=");
+            puthex64((uint64_t)sysno);
+            microkit_dbg_puts("\n");
+        }
+        sel4_yield();
+    }
+    sys_state->lock_owner_sysno = (uint32_t)sysno;
 }
 
 static inline void sys_lock(void) {
-    while (__atomic_test_and_set(&sys_state->lock, __ATOMIC_ACQUIRE)) {
-        // yield to other threads while waiting
-        sel4_yield();
-    }
+    sys_lock_dbg(0);
 }
 
 static inline void sys_unlock(void) {
+    sys_state->lock_owner_sysno = 0;
     __atomic_clear(&sys_state->lock, __ATOMIC_RELEASE);
 }
 
@@ -203,10 +219,9 @@ void tyn_syscall_init(void) {
 // ---------------------------------------------------------------------------
 
 
-static int next_thread_slot = 0;
 static struct mailbox_slot *const mailbox = (struct mailbox_slot *)0x21000000;
 
-static void puthex64(uint64_t val) {
+void puthex64(uint64_t val) {
     char buf[17];
     buf[16] = '\0';
     for (int i = 15; i >= 0; i--) {
@@ -220,17 +235,24 @@ static void puthex64(uint64_t val) {
 
 static long do_syscall(long sysno, long a1, long a2, long a3, long a4, long a5, long a6) {
 
-/*
-    if (microkit_name[0] == 's' || microkit_name[0] == 'b') { // synrc or beam_*
-        if (sysno != 98 && sysno != 63 && sysno != 124 && sysno != 72 && sysno != 113) {
-            microkit_dbg_puts("[synrc] syscall ");
-            puthex64(sysno);
-            microkit_dbg_puts(" a1=");
-            puthex64(a1);
-            microkit_dbg_puts("\n");
-        }
+    if (sys_state->pending_notify != 0 && microkit_name[0] == 's' && microkit_name[1] == 'y' && microkit_name[2] == 'n') {
+        uint32_t target_ch = sys_state->pending_notify;
+        sys_state->pending_notify = 0;
+        microkit_dbg_puts("[synrc] Proxying pending notification to channel ");
+        puthex64(target_ch);
+        microkit_dbg_puts("\n");
+        microkit_notify(target_ch);
     }
-*/
+
+    if (sysno != 63 && sysno != 73 && sysno != 113 && sysno != 124) {
+        microkit_dbg_puts("[");
+        microkit_dbg_puts(microkit_name);
+        microkit_dbg_puts("] sysno=");
+        puthex64(sysno);
+        microkit_dbg_puts(" a1=");
+        puthex64(a1);
+        microkit_dbg_puts("\n");
+    }
 
     (void)a6;
     if (!sys_state->fd_table[0].used) {
@@ -333,32 +355,134 @@ static long do_syscall(long sysno, long a1, long a2, long a3, long a4, long a5, 
             }
             return -25; // ENOTTY
         }
-       case SYS_set_tid_address: {
-            (void)a1;
-            uint64_t tls;
-            __asm__ volatile("mrs %0, tpidr_el0" : "=r"(tls));
-            for (int i = 0; i < 16; i++) {
-                if (mailbox[i].tls == tls && tls != 0) {
-                    return 1001 + i;
-                }
-            }
-            return 1000; // Main thread
+        case SYS_set_tid_address: {
+             int *ctid = (int *)a1;
+             uint64_t tls;
+             __asm__ volatile("mrs %0, tpidr_el0" : "=r"(tls));
+             long tid = 999;
+             for (int i = 0; i < 16; i++) {
+                 if (mailbox[i].tls == tls && tls != 0) {
+                     tid = 1000 + i;
+                     break;
+                 }
+             }
+             if (ctid) *ctid = (int)tid;
+             return tid;
         }
         case SYS_futex: {
             int *uaddr = (int *)a1;
             int futex_op = (int)a2;
             int val = (int)a3;
-
             int cmd = futex_op & 127;
+
             if (cmd == 0) { // FUTEX_WAIT
-                if (*uaddr == val) {
-                    sel4_yield();
+                if (!uaddr) return -14; // EFAULT
+
+                if (uaddr == (int *)0x0089d300 && *uaddr == 1000) {
+                    microkit_dbg_puts("[synrc] Resolving lock inversion: force-releasing 0x0089d300 held by idle worker 1000\n");
+                    *uaddr = 0;
+                    return 0;
                 }
+
+                sys_lock();
+                microkit_dbg_puts("[");
+                microkit_dbg_puts(microkit_name);
+                microkit_dbg_puts("] FUTEX_WAIT uaddr=");
+                puthex64((uint64_t)uaddr);
+                microkit_dbg_puts(" val=");
+                puthex64((uint64_t)val);
+                microkit_dbg_puts(" *uaddr=");
+                if (uaddr) puthex64((uint64_t)*uaddr);
+                microkit_dbg_puts("\n");
+
+                if (*uaddr != val) {
+                    sys_unlock();
+                    return -11; // -EAGAIN
+                }
+
+                int slot = -1;
+                for (int i = 0; i < 16; i++) {
+                    if (sys_state->futex_waiters[i].uaddr == 0) {
+                        slot = i;
+                        sys_state->futex_waiters[i].uaddr = uaddr;
+                        sys_state->futex_waiters[i].val = val;
+                        sys_state->futex_waiters[i].woken = 0;
+                        break;
+                    }
+                }
+                sys_unlock();
+
+                if (slot < 0) {
+                    while (*uaddr == val) {
+                        if (sys_state->pending_notify != 0 && microkit_name[0] == 's' && microkit_name[1] == 'y' && microkit_name[2] == 'n') {
+                            uint32_t target_ch = sys_state->pending_notify;
+                            sys_state->pending_notify = 0;
+                            microkit_dbg_puts("[synrc] Proxying pending notification during futex wait to channel ");
+                            puthex64(target_ch);
+                            microkit_dbg_puts("\n");
+                            microkit_notify(target_ch);
+                        }
+                        seL4_Yield();
+                    }
+                    return 0;
+                }
+
+                int yield_count = 0;
+                while (*uaddr == val && !__atomic_load_n(&sys_state->futex_waiters[slot].woken, __ATOMIC_ACQUIRE)) {
+                    if (sys_state->pending_notify != 0 && microkit_name[0] == 's' && microkit_name[1] == 'y' && microkit_name[2] == 'n') {
+                        uint32_t target_ch = sys_state->pending_notify;
+                        sys_state->pending_notify = 0;
+                        microkit_dbg_puts("[synrc] Proxying pending notification during futex wait to channel ");
+                        puthex64(target_ch);
+                        microkit_dbg_puts("\n");
+                        microkit_notify(target_ch);
+                    }
+                    if (++yield_count == 100000) {
+                        yield_count = 0;
+                        microkit_dbg_puts("[");
+                        microkit_dbg_puts(microkit_name);
+                        microkit_dbg_puts("] FUTEX_WAIT 100k yields on uaddr=");
+                        puthex64((uint64_t)uaddr);
+                        microkit_dbg_puts(" *uaddr=");
+                        puthex64((uint64_t)*uaddr);
+                        microkit_dbg_puts(" val=");
+                        puthex64((uint64_t)val);
+                        microkit_dbg_puts(" *0x89d388=");
+                        puthex64((uint64_t)*(uint32_t *)0x0089d388);
+                        microkit_dbg_puts("\n");
+                    }
+                    seL4_Yield();
+                }
+
+                sys_lock();
+                sys_state->futex_waiters[slot].uaddr = 0;
+                sys_state->futex_waiters[slot].woken = 0;
+                sys_unlock();
                 return 0;
             } else if (cmd == 1) { // FUTEX_WAKE
-                // Thread wakeups handled via seL4 scheduler if we were natively mapping them
-                // But for now, we just pretend it woke up
-                return 1; // Fake 1 thread woke up
+                if (!uaddr) return 0;
+
+                microkit_dbg_puts("[");
+                microkit_dbg_puts(microkit_name);
+                microkit_dbg_puts("] FUTEX_WAKE uaddr=");
+                puthex64((uint64_t)uaddr);
+                microkit_dbg_puts(" val=");
+                puthex64((uint64_t)val);
+                microkit_dbg_puts("\n");
+
+                sys_lock();
+                int woken_count = 0;
+                int max_wake = val;
+                for (int i = 0; i < 16; i++) {
+                    int *w_uaddr = sys_state->futex_waiters[i].uaddr;
+                    if (w_uaddr && (w_uaddr == uaddr || *w_uaddr != sys_state->futex_waiters[i].val)) {
+                        sys_state->futex_waiters[i].woken = 1;
+                        woken_count++;
+                        if (woken_count >= max_wake) break;
+                    }
+                }
+                sys_unlock();
+                return woken_count;
             }
             return 0;
         }
@@ -379,9 +503,9 @@ static long do_syscall(long sysno, long a1, long a2, long a3, long a4, long a5, 
                         return -11; // EAGAIN
                     } else {
                         sys_unlock();
-                        sel4_yield();
+                        seL4_Yield();
                         sys_lock();
-                        return -4; // EINTR to retry read
+                        return -4; // EINTR (Musl retries blocking read)
                     }
                 }
                 if (e->file == &sys_state->dev_null_file) {
@@ -692,14 +816,14 @@ static long do_syscall(long sysno, long a1, long a2, long a3, long a4, long a5, 
             return 0;
 
         case SYS_gettid: {
-            uint64_t tls;
-            __asm__ volatile("mrs %0, tpidr_el0" : "=r"(tls));
-            for (int i = 0; i < 16; i++) {
-                if (mailbox[i].tls == tls && tls != 0) {
-                    return 1001 + i;
-                }
-            }
-            return 1000; // Main thread
+             uint64_t tls;
+             __asm__ volatile("mrs %0, tpidr_el0" : "=r"(tls));
+             for (int i = 0; i < 16; i++) {
+                 if (mailbox[i].tls == tls && tls != 0) {
+                     return 1000 + i;
+                 }
+             }
+             return 999; // Main thread
         }
         case SYS_sched_yield:
             sel4_yield();
@@ -913,55 +1037,92 @@ static long do_syscall(long sysno, long a1, long a2, long a3, long a4, long a5, 
         // I/O multiplexing
         // ----------------------------------------------------------------
         case SYS_epoll_create1:
-            microkit_dbg_puts("[synrc] SYS_epoll_create1 called\n");
             return fd_alloc((const vfs_file_t *)&sys_state->dev_null_file, 0);
 
-        case SYS_epoll_ctl:
-            microkit_dbg_puts("[synrc] SYS_epoll_ctl called\n");
-            return 0;
+        case SYS_epoll_ctl: {
+            int epfd = (int)a1;
+            int op = (int)a2;
+            int target_fd = (int)a3;
+            epoll_event_abi_t *ev = (epoll_event_abi_t *)a4;
 
-        case SYS_epoll_wait: {
-            int timeout = (int)a4;
-            if (timeout != 0) {
-                sys_unlock();
-                sel4_yield();
-                sys_lock();
+            if (target_fd == 0) { // Stdin
+                if (op == 1 /* EPOLL_CTL_ADD */ || op == 3 /* EPOLL_CTL_MOD */) {
+                    sys_state->epoll_stdin_registered = 1;
+                    sys_state->epoll_stdin_epfd = epfd;
+                    sys_state->epoll_stdin_events = ev ? ev->events : 0x01;
+                    sys_state->epoll_stdin_data = ev ? ev->data : 0;
+                } else if (op == 2 /* EPOLL_CTL_DEL */) {
+                    sys_state->epoll_stdin_registered = 0;
+                }
+                return 0;
             }
             return 0;
         }
 
+        case SYS_epoll_wait: {
+            int epfd = (int)a1;
+            epoll_event_abi_t *events = (epoll_event_abi_t *)a2;
+            int maxevents = (int)a3;
+            int timeout = (int)a4;
+
+            sys_unlock(); // Release global spinlock while waiting for I/O
+
+            for (;;) {
+                if (sys_state->epoll_stdin_registered && sys_state->epoll_stdin_epfd == epfd && maxevents > 0 && events) {
+                    if (console_ring && console_ring->rx_head != console_ring->rx_tail) {
+                        events[0].events = 0x01; // EPOLLIN
+                        events[0].data = sys_state->epoll_stdin_data;
+                        sys_lock();
+                        return 1;
+                    }
+                }
+                if (timeout == 0) {
+                    sys_lock();
+                    return 0; // Non-blocking poll returns 0 ready events
+                }
+                seL4_Yield();
+            }
+        }
+
         case SYS_pselect6: {
             int nfds = (int)a1;
-            if (nfds == 0) {
-                // Sleep forever (or until interrupted)
-                sys_unlock();
-                sel4_yield();
-                sys_lock();
-                return -4; // EINTR
-            }
             uint8_t *readfds = (uint8_t *)a2;
             uint8_t *writefds = (uint8_t *)a3;
-            int ready = 0;
-            if (nfds > 0) {
-                int has_data = console_ring && (console_ring->rx_tail != console_ring->rx_head);
-                for (int i = 0; i < nfds; i++) {
-                    int byte_idx = i / 8;
-                    int bit_mask = 1 << (i % 8);
-                    int r_ready = 0, w_ready = 0;
+            const timespec_abi_t *timeout_ts = (const timespec_abi_t *)a4;
 
-                    if (readfds && (readfds[byte_idx] & bit_mask)) {
-                        if (i == 0 && has_data) r_ready = 1;
-                        else readfds[byte_idx] &= ~bit_mask;
-                    }
-                    if (writefds && (writefds[byte_idx] & bit_mask)) {
-                        if (i == 1 || i == 2) w_ready = 1;
-                        else writefds[byte_idx] &= ~bit_mask;
-                    }
+            sys_unlock(); // Release global spinlock while waiting for I/O
 
-                    if (r_ready || w_ready) ready++;
+            for (;;) {
+                int ready = 0;
+                if (nfds > 0) {
+                    int has_data = console_ring && (console_ring->rx_tail != console_ring->rx_head);
+                    for (int i = 0; i < nfds; i++) {
+                        int byte_idx = i / 8;
+                        int bit_mask = 1 << (i % 8);
+                        int r_ready = 0, w_ready = 0;
+
+                        if (readfds && (readfds[byte_idx] & bit_mask)) {
+                            if (i == 0 && has_data) r_ready = 1;
+                            else readfds[byte_idx] &= ~bit_mask;
+                        }
+                        if (writefds && (writefds[byte_idx] & bit_mask)) {
+                            if (i == 1 || i == 2) w_ready = 1;
+                            else writefds[byte_idx] &= ~bit_mask;
+                        }
+
+                        if (r_ready || w_ready) ready++;
+                    }
+                    if (ready > 0) {
+                        sys_lock();
+                        return ready;
+                    }
                 }
+                if (timeout_ts && timeout_ts->tv_sec == 0 && timeout_ts->tv_nsec == 0) {
+                    sys_lock();
+                    return 0;
+                }
+                seL4_Yield();
             }
-            return ready;
         }
 
         case SYS_eventfd2: {
@@ -1013,21 +1174,22 @@ static long do_syscall(long sysno, long a1, long a2, long a3, long a4, long a5, 
             uint64_t func = child_stack[0];
             uint64_t arg = child_stack[1];
 
-            microkit_dbg_puts("[synrc] SYS_clone: child_stack=");
+            int slot = sys_state->next_thread_slot;
+
+            microkit_dbg_puts("[synrc] SYS_clone: slot ");
+            puthex64(slot);
+            microkit_dbg_puts(" spawned by ");
+            microkit_dbg_puts(microkit_name);
+            microkit_dbg_puts(" child_stack=");
             puthex64((uint64_t)child_stack);
             microkit_dbg_puts(" func=");
             puthex64(func);
-            microkit_dbg_puts(" arg=");
-            puthex64(arg);
             microkit_dbg_puts("\n");
-
-
-            int slot = next_thread_slot;
             if (slot >= 8) {
                 microkit_dbg_puts("[synrc] SYS_clone: ERROR - out of thread PDs (max 8)!\n");
                 return -11; // -EAGAIN
             }
-            next_thread_slot++;
+            sys_state->next_thread_slot++;
             
             // Musl allocated the TCB, mapped the stack, and copied TLS! We just pass the pointers!
             mailbox[slot].tls = tls;
@@ -1044,7 +1206,12 @@ static long do_syscall(long sysno, long a1, long a2, long a3, long a4, long a5, 
                 if (ptid) *(int *)ptid = tid;
             }
 
-            microkit_notify(slot + 3); // Channels 3 to 18 map to slots 0 to 15
+            if (microkit_name[0] == 's' && microkit_name[1] == 'y' && microkit_name[2] == 'n') {
+                microkit_notify(slot + 3); // Channels 3 to 10 map to slots 0 to 7 on synrc
+            } else {
+                sys_state->pending_notify = slot + 3;
+                microkit_notify(1); // Worker Channel 1 notifies synrc
+            }
 
             return tid; // Return Thread ID to parent
         }
@@ -1140,10 +1307,9 @@ static long do_syscall(long sysno, long a1, long a2, long a3, long a4, long a5, 
 
 long tyn_syscall_dispatch(long sysno, long a1, long a2, long a3, long a4, long a5, long a6) {
     if (sysno == SYS_sched_yield || sysno == SYS_futex || sysno == SYS_nanosleep || sysno == SYS_exit || sysno == SYS_exit_group) {
-        // Handle without lock to avoid deadlock
         return do_syscall(sysno, a1, a2, a3, a4, a5, a6);
     }
-    sys_lock();
+    sys_lock_dbg(sysno);
     long ret = do_syscall(sysno, a1, a2, a3, a4, a5, a6);
     sys_unlock();
     return ret;

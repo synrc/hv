@@ -73,8 +73,6 @@ static const char *beam_argv[] = {
     "-home", "/",
     "-boot", "/otp/bin/start",
     "-init_debug",
-    "-noshell",
-    "-eval", "erlang:display(hello_world), init:stop()",
     0
 };
 static const int beam_argc = (sizeof(beam_argv) / sizeof(beam_argv[0])) - 1;

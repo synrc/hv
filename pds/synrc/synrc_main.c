@@ -16,6 +16,11 @@ void init(void) {
 
 void notified(microkit_channel ch) {
     (void)ch;
+    uint32_t target_ch = sys_state->pending_notify;
+    if (target_ch != 0) {
+        sys_state->pending_notify = 0;
+        microkit_notify(target_ch);
+    }
 }
 
 seL4_Bool fault(microkit_child child, microkit_msginfo msginfo, microkit_msginfo *reply_msginfo) {
@@ -26,12 +31,17 @@ seL4_Bool fault(microkit_child child, microkit_msginfo msginfo, microkit_msginfo
     uint64_t is_instruction = seL4_GetMR(2);
     uint64_t fsr = seL4_GetMR(3);
 
-    microkit_dbg_puts("[synrc] Fault intercepted from child PD!\n");
-    (void)child;
-    (void)ip;
-    (void)fault_addr;
-    (void)is_instruction;
-    (void)fsr;
+    microkit_dbg_puts("[synrc] FAULT INTERCEPTED: child=");
+    puthex64(child);
+    microkit_dbg_puts(" ip=");
+    puthex64(ip);
+    microkit_dbg_puts(" fault_addr=");
+    puthex64(fault_addr);
+    microkit_dbg_puts(" fsr=");
+    puthex64(fsr);
+    microkit_dbg_puts(" is_insn=");
+    puthex64(is_instruction);
+    microkit_dbg_puts("\n");
 
     return false; // Do not resume the faulting child thread
 }

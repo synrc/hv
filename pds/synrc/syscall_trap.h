@@ -9,6 +9,9 @@
 
 #define sys_state ((volatile sys_state_t *)0x22000000)
 
+void puthex64(uint64_t val);
+void tyn_syscall_init(void);
+
 typedef struct {
     const vfs_file_t *file;
     size_t offset;
@@ -18,13 +21,37 @@ typedef struct {
 } fd_entry_t;
 
 typedef struct {
+    uint32_t events;
+    uint64_t data;
+} __attribute__((packed)) epoll_event_abi_t;
+
+typedef struct {
+    int64_t tv_sec;
+    long    tv_nsec;
+} timespec_abi_t;
+
+typedef struct {
+    int *uaddr;
+    int  val;
+    int  woken;
+} futex_waiter_t;
+
+typedef struct {
     int lock; // Spinlock
+    uint32_t lock_owner_sysno;
+    int next_thread_slot;
+    volatile uint32_t pending_notify;
     uintptr_t heap_curr;
     uintptr_t mmap_curr;
     uintptr_t mmap_jit_curr;
     uint32_t  trampoline_index;
     uint64_t fake_timer_nsec;
     int vfs_file_count;
+    int       epoll_stdin_registered;
+    int       epoll_stdin_epfd;
+    uint32_t  epoll_stdin_events;
+    uint64_t  epoll_stdin_data;
+    futex_waiter_t futex_waiters[16];
     vfs_file_t dev_null_file;
     vfs_file_t dev_dir_file;
     vfs_file_t dev_pipe_file;
