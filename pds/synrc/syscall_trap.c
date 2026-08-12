@@ -179,6 +179,10 @@ static int fd_alloc(const vfs_file_t *f, const char *dir_path) {
             sys_state->fd_table[i].file = f;
             sys_state->fd_table[i].offset = 0;
             sys_state->fd_table[i].nonblock = 0;
+            sys_state->fd_table[i].pipe_head = 0;
+            sys_state->fd_table[i].pipe_tail = 0;
+            sys_state->fd_table[i].epoll_registered = 0;
+            sys_state->fd_table[i].pipe_read_fd = -1;
             if (dir_path) {
                 tyn_strncpy((char *)sys_state->fd_table[i].dir_path, dir_path, 128);
             } else {
@@ -244,7 +248,7 @@ static long do_syscall(long sysno, long a1, long a2, long a3, long a4, long a5, 
         microkit_notify(target_ch);
     }
 
-    if (sysno != 63 && sysno != 73 && sysno != 113 && sysno != 124) {
+    if (sysno != 63 && sysno != 113 && sysno != 124) {
         microkit_dbg_puts("[");
         microkit_dbg_puts(microkit_name);
         microkit_dbg_puts("] sysno=");
@@ -284,15 +288,19 @@ static long do_syscall(long sysno, long a1, long a2, long a3, long a4, long a5, 
             return 0;
 
         case SYS_pipe2: {
-            int *pipefd = (int *)a1;
-            int flags = (int)a2; // O_NONBLOCK is 04000
-            int fd0 = fd_alloc((const vfs_file_t *)&sys_state->dev_pipe_file, 0);
-            int fd1 = fd_alloc((const vfs_file_t *)&sys_state->dev_pipe_file, 0);
-            if (fd0 < 0 || fd1 < 0) return -1;
-            sys_state->fd_table[fd0].nonblock = (flags & 04000) ? 1 : 0;
-            sys_state->fd_table[fd1].nonblock = (flags & 04000) ? 1 : 0;
-            pipefd[0] = fd0;
-            pipefd[1] = fd1;
+            int *fds = (int *)a1;
+            int r = fd_alloc((const vfs_file_t *)&sys_state->dev_pipe_file, 0);
+            int w = fd_alloc((const vfs_file_t *)&sys_state->dev_pipe_file, 0);
+            if (r < 0 || w < 0) return -24;
+            sys_state->fd_table[w].file = &sys_state->dev_pipe_file;
+            sys_state->fd_table[w].pipe_read_fd = r;
+            fds[0] = r;
+            fds[1] = w;
+            microkit_dbg_puts("[synrc] SYS_pipe2 created read_fd=");
+            puthex64(r);
+            microkit_dbg_puts(" write_fd=");
+            puthex64(w);
+            microkit_dbg_puts("\n");
             return 0;
         }
 
@@ -310,6 +318,9 @@ static long do_syscall(long sysno, long a1, long a2, long a3, long a4, long a5, 
                 if (cmd == 4) { // F_SETFL
                     sys_state->fd_table[fd].nonblock = (arg & 04000) ? 1 : 0;
                     return 0;
+                }
+                if (fd == 100) { // timerfd
+                    // ...
                 }
                 return 0; // Fake success for other commands
             }
@@ -340,19 +351,19 @@ static long do_syscall(long sysno, long a1, long a2, long a3, long a4, long a5, 
                     }
                     return 0;
                 }
+                if (req == 0x5413) { // TIOCGWINSZ
+                    uint16_t *ws = (uint16_t *)a3;
+                    if (ws) {
+                        ws[0] = 24; // rows
+                        ws[1] = 80; // cols
+                        ws[2] = 0;  // xpixel
+                        ws[3] = 0;  // ypixel
+                    }
+                    return 0;
+                }
                 return 0; // fake success for other terminal ioctls
             }
 
-            if (a2 == 0x5413) { // TIOCGWINSZ
-                uint16_t *ws = (uint16_t *)a3;
-                if (ws) {
-                    ws[0] = 24; // rows
-                    ws[1] = 80; // cols
-                    ws[2] = 0;
-                    ws[3] = 0;
-                }
-                return 0;
-            }
             return -25; // ENOTTY
         }
         case SYS_set_tid_address: {
@@ -491,21 +502,48 @@ static long do_syscall(long sysno, long a1, long a2, long a3, long a4, long a5, 
             int fd = (int)a1;
             char *buf = (char *)a2;
             size_t count = (size_t)a3;
+            
+            if (fd == 100) { // timerfd
+                if (count >= 8) {
+                    uint64_t expirations = 1;
+                    char *src = (char *)&expirations;
+                    for (int i = 0; i < 8; i++) buf[i] = src[i];
+                    sys_state->timerfd_active = 0; // one-shot for simplicity
+                    return 8;
+                }
+                return -22; // EINVAL
+            }
+            
             if (fd == 0) {
-                size_t c = console_ring_read_rx(console_ring, buf, count);
-                if (c == 0) return -11; // EAGAIN
+                microkit_dbg_puts("[synrc] SYS_read on fd 0 called!\n");
+                if (count == 0) return 0;
+                size_t c;
+                while ((c = console_ring_read_rx(console_ring, buf, count)) == 0) {
+                    sys_unlock();
+                    seL4_Yield();
+                    sys_lock();
+                }
+                microkit_dbg_puts("[synrc] SYS_read on fd 0 returning data!\n");
                 return (long)c;
             }
             if (fd >= 3 && fd < FD_MAX && sys_state->fd_table[fd].used) {
                 fd_entry_t *e = (fd_entry_t *)&sys_state->fd_table[fd];
                 if (e->file == &sys_state->dev_pipe_file) {
+                    if (e->pipe_head != e->pipe_tail) {
+                        size_t copied = 0;
+                        while (e->pipe_head != e->pipe_tail && copied < count) {
+                            buf[copied++] = e->pipe_buf[e->pipe_tail];
+                            e->pipe_tail = (e->pipe_tail + 1) % 32;
+                        }
+                        return copied;
+                    }
                     if (e->nonblock) {
                         return -11; // EAGAIN
                     } else {
                         sys_unlock();
                         seL4_Yield();
                         sys_lock();
-                        return -4; // EINTR (Musl retries blocking read)
+                        return -4; // EINTR
                     }
                 }
                 if (e->file == &sys_state->dev_null_file) {
@@ -534,7 +572,21 @@ static long do_syscall(long sysno, long a1, long a2, long a3, long a4, long a5, 
                 return a3;
             }
             if (fd >= 3 && fd < FD_MAX && sys_state->fd_table[fd].used) {
-                if (sys_state->fd_table[fd].file == &sys_state->dev_pipe_file) {
+                fd_entry_t *e = (fd_entry_t *)&sys_state->fd_table[fd];
+                if (e->file == &sys_state->dev_pipe_file) {
+                    if (e->pipe_read_fd >= 0) {
+                        e = (fd_entry_t *)&sys_state->fd_table[e->pipe_read_fd];
+                    }
+                    const char *src = (const char *)a2;
+                    for (size_t i = 0; i < a3; i++) {
+                        e->pipe_buf[e->pipe_head] = src[i];
+                        e->pipe_head = (e->pipe_head + 1) % 32;
+                    }
+                    microkit_dbg_puts("[synrc] SYS_write to pipe write_fd=");
+                    puthex64(fd);
+                    microkit_dbg_puts(" -> read_fd=");
+                    puthex64(e->pipe_read_fd >= 0 ? e->pipe_read_fd : fd);
+                    microkit_dbg_puts("\n");
                     asm volatile("sev");
                     return a3;
                 }
@@ -564,12 +616,23 @@ static long do_syscall(long sysno, long a1, long a2, long a3, long a4, long a5, 
                 return total;
             }
             if (fd >= 3 && fd < FD_MAX && sys_state->fd_table[fd].used) {
-                if (sys_state->fd_table[fd].file == &sys_state->dev_pipe_file) {
-                    asm volatile("sev");
+                fd_entry_t *e = (fd_entry_t *)&sys_state->fd_table[fd];
+                if (e->file == &sys_state->dev_pipe_file) {
+                    if (e->pipe_read_fd >= 0) {
+                        e = (fd_entry_t *)&sys_state->fd_table[e->pipe_read_fd];
+                    }
                     struct iovec { void *iov_base; size_t iov_len; };
                     const struct iovec *iov = (const struct iovec *)a2;
                     long total = 0;
-                    for (int i = 0; i < (int)a3; i++) total += iov[i].iov_len;
+                    for (int i = 0; i < (int)a3; i++) {
+                        const char *src = (const char *)iov[i].iov_base;
+                        for (size_t j = 0; j < iov[i].iov_len; j++) {
+                            e->pipe_buf[e->pipe_head] = src[j];
+                            e->pipe_head = (e->pipe_head + 1) % 32;
+                        }
+                        total += iov[i].iov_len;
+                    }
+                    asm volatile("sev");
                     return total;
                 }
                 if (sys_state->fd_table[fd].file == &sys_state->dev_null_file) {
@@ -599,6 +662,11 @@ static long do_syscall(long sysno, long a1, long a2, long a3, long a4, long a5, 
                 microkit_dbg_puts("\n");
                 return -2; // ENOENT
             }
+
+            microkit_dbg_puts("[synrc] SYS_openat OK path: ");
+            if (path) microkit_dbg_puts(path);
+            microkit_dbg_puts("\n");
+
             const char *dp = (f == &sys_state->dev_dir_file) ? path : 0;
             int fd = fd_alloc(f, dp);
             return fd < 0 ? -24 : (long)fd; // EMFILE
@@ -663,6 +731,10 @@ static long do_syscall(long sysno, long a1, long a2, long a3, long a4, long a5, 
             if (!st) return -14; // EFAULT
             // zero the entire stat buffer (128 bytes)
             for (int i = 0; i < 128; i++) st[i] = 0;
+
+            microkit_dbg_puts("[synrc] fstatat: ");
+            microkit_dbg_puts(path);
+            microkit_dbg_puts("\n");
 
             const vfs_file_t *f = vfs_lookup(path);
             if (f) {
@@ -959,10 +1031,42 @@ static long do_syscall(long sysno, long a1, long a2, long a3, long a4, long a5, 
         }
 
         case SYS_timerfd_create:
-            return -38;
+            return 100; // Fake FD for timerfd
 
-        case SYS_timerfd_settime:
-            return 0;
+        case SYS_timerfd_settime: {
+            int fd = (int)a1;
+            int flags = (int)a2; // TFD_TIMER_ABSTIME?
+            
+            struct itimerspec_abi {
+                timespec_abi_t it_interval;
+                timespec_abi_t it_value;
+            };
+            const struct itimerspec_abi *new_value = (const struct itimerspec_abi *)a3;
+            
+            if (fd == 100 && new_value) {
+                if (new_value->it_value.tv_sec == 0 && new_value->it_value.tv_nsec == 0) {
+                    sys_state->timerfd_active = 0;
+                } else {
+                    int64_t sec;
+                    long nsec;
+                    get_fake_time(&sec, &nsec);
+                    uint64_t now_ns = (uint64_t)sec * 1000000000ULL + (uint64_t)nsec;
+                    
+                    uint64_t expire_ns = (uint64_t)new_value->it_value.tv_sec * 1000000000ULL + (uint64_t)new_value->it_value.tv_nsec;
+                    
+                    if ((flags & 1) == 0) { // TFD_TIMER_ABSTIME is 1
+                        // Relative time
+                        sys_state->timerfd_expire_nsec = now_ns + expire_ns;
+                    } else {
+                        // Absolute time
+                        sys_state->timerfd_expire_nsec = expire_ns;
+                    }
+                    sys_state->timerfd_active = 1;
+                }
+                return 0;
+            }
+            return -9; // EBADF
+        }
 
         case SYS_gettimeofday: {
             tyn_timeval_t *tv = (tyn_timeval_t *)a1;
@@ -1045,16 +1149,50 @@ static long do_syscall(long sysno, long a1, long a2, long a3, long a4, long a5, 
             int target_fd = (int)a3;
             epoll_event_abi_t *ev = (epoll_event_abi_t *)a4;
 
-            if (target_fd == 0) { // Stdin
+            if (target_fd == 0 || target_fd == 1 || target_fd == 2) {
                 if (op == 1 /* EPOLL_CTL_ADD */ || op == 3 /* EPOLL_CTL_MOD */) {
-                    sys_state->epoll_stdin_registered = 1;
-                    sys_state->epoll_stdin_epfd = epfd;
-                    sys_state->epoll_stdin_events = ev ? ev->events : 0x01;
-                    sys_state->epoll_stdin_data = ev ? ev->data : 0;
+                    if (target_fd == 0) {
+                        sys_state->epoll_stdin_registered = 1;
+                        sys_state->epoll_stdin_epfd = epfd;
+                        sys_state->epoll_stdin_events = ev ? ev->events : 0x01;
+                        sys_state->epoll_stdin_data = ev ? ev->data : 0;
+                    } else if (target_fd == 1) {
+                        sys_state->epoll_stdout_registered = 1;
+                        sys_state->epoll_stdout_epfd = epfd;
+                        sys_state->epoll_stdout_events = ev ? ev->events : 0x04;
+                        sys_state->epoll_stdout_data = ev ? ev->data : 0;
+                    } else if (target_fd == 2) {
+                        sys_state->epoll_stderr_registered = 1;
+                        sys_state->epoll_stderr_epfd = epfd;
+                        sys_state->epoll_stderr_events = ev ? ev->events : 0x04;
+                        sys_state->epoll_stderr_data = ev ? ev->data : 0;
+                    }
                 } else if (op == 2 /* EPOLL_CTL_DEL */) {
-                    sys_state->epoll_stdin_registered = 0;
+                    if (target_fd == 0) sys_state->epoll_stdin_registered = 0;
+                    if (target_fd == 1) sys_state->epoll_stdout_registered = 0;
+                    if (target_fd == 2) sys_state->epoll_stderr_registered = 0;
                 }
                 return 0;
+            }
+            if (target_fd >= 3 && target_fd < FD_MAX && sys_state->fd_table[target_fd].used) {
+                if (op == 1 /* EPOLL_CTL_ADD */ || op == 3 /* EPOLL_CTL_MOD */) {
+                    sys_state->fd_table[target_fd].epoll_registered = 1;
+                    sys_state->fd_table[target_fd].epoll_epfd = epfd;
+                    sys_state->fd_table[target_fd].epoll_events = ev ? ev->events : 0x01;
+                    sys_state->fd_table[target_fd].epoll_data = ev ? ev->data : 0;
+                    microkit_dbg_puts("[synrc] SYS_epoll_ctl ADD/MOD fd=");
+                    puthex64(target_fd);
+                    microkit_dbg_puts(" to epfd=");
+                    puthex64(epfd);
+                    microkit_dbg_puts("\n");
+                } else if (op == 2 /* EPOLL_CTL_DEL */) {
+                    sys_state->fd_table[target_fd].epoll_registered = 0;
+                    microkit_dbg_puts("[synrc] SYS_epoll_ctl DEL fd=");
+                    puthex64(target_fd);
+                    microkit_dbg_puts(" from epfd=");
+                    puthex64(epfd);
+                    microkit_dbg_puts("\n");
+                }
             }
             return 0;
         }
@@ -1065,20 +1203,97 @@ static long do_syscall(long sysno, long a1, long a2, long a3, long a4, long a5, 
             int maxevents = (int)a3;
             int timeout = (int)a4;
 
+            microkit_dbg_puts("[synrc] SYS_epoll_wait epfd=");
+            puthex64(epfd);
+            microkit_dbg_puts(" timeout=");
+            puthex64((uint64_t)timeout);
+            microkit_dbg_puts("\n");
+
             sys_unlock(); // Release global spinlock while waiting for I/O
 
+            int yields = 0;
             for (;;) {
-                if (sys_state->epoll_stdin_registered && sys_state->epoll_stdin_epfd == epfd && maxevents > 0 && events) {
-                    if (console_ring && console_ring->rx_head != console_ring->rx_tail) {
-                        events[0].events = 0x01; // EPOLLIN
-                        events[0].data = sys_state->epoll_stdin_data;
-                        sys_lock();
-                        return 1;
+                int ready_count = 0;
+                
+                if (sys_state->epoll_stdin_registered && sys_state->epoll_stdin_epfd == epfd && events) {
+                    uint32_t ready_events = 0;
+                    if (console_ring && console_ring->rx_head != console_ring->rx_tail) ready_events |= 0x01; // EPOLLIN
+                    ready_events |= 0x04; // EPOLLOUT
+                    if (ready_events & sys_state->epoll_stdin_events) {
+                        events[ready_count].events = ready_events & sys_state->epoll_stdin_events;
+                        events[ready_count].data = sys_state->epoll_stdin_data;
+                        ready_count++;
                     }
                 }
+                if (sys_state->epoll_stdout_registered && sys_state->epoll_stdout_epfd == epfd && maxevents > ready_count && events) {
+                    uint32_t ready_events = 0x04; // EPOLLOUT
+                    if (ready_events & sys_state->epoll_stdout_events) {
+                        events[ready_count].events = ready_events & sys_state->epoll_stdout_events;
+                        events[ready_count].data = sys_state->epoll_stdout_data;
+                        ready_count++;
+                    }
+                }
+                if (sys_state->epoll_stderr_registered && sys_state->epoll_stderr_epfd == epfd && maxevents > ready_count && events) {
+                    uint32_t ready_events = 0x04; // EPOLLOUT
+                    if (ready_events & sys_state->epoll_stderr_events) {
+                        events[ready_count].events = ready_events & sys_state->epoll_stderr_events;
+                        events[ready_count].data = sys_state->epoll_stderr_data;
+                        ready_count++;
+                    }
+                }
+
+                for (int i = 3; i < FD_MAX; i++) {
+                    if (sys_state->fd_table[i].used && sys_state->fd_table[i].epoll_registered && sys_state->fd_table[i].epoll_epfd == epfd) {
+                        fd_entry_t *e = (fd_entry_t *)&sys_state->fd_table[i];
+                        if (e->file == &sys_state->dev_pipe_file) {
+                            microkit_dbg_puts("[synrc] epoll_wait checking pipe fd=");
+                            puthex64(i);
+                            microkit_dbg_puts(" head=");
+                            puthex64(e->pipe_head);
+                            microkit_dbg_puts(" tail=");
+                            puthex64(e->pipe_tail);
+                            microkit_dbg_puts("\n");
+                            if (e->pipe_head != e->pipe_tail && ready_count < maxevents) {
+                                epoll_event_abi_t *ev = &events[ready_count];
+                                ev->events = 1; // EPOLLIN
+                                ev->data = e->epoll_data;
+                                ready_count++;
+                                microkit_dbg_puts("[synrc] epoll_wait found pipe data!\n");
+                            }
+                        }
+                    }
+                }
+
+                // Check timerfd
+                if (sys_state->timerfd_active && sys_state->timerfd_epoll_registered && ready_count < maxevents) {
+                    int64_t sec;
+                    long nsec;
+                    // Bump fake time to simulate time passing while waiting!
+                    sys_state->fake_timer_nsec += 1000000; // 1 ms
+                    get_fake_time(&sec, &nsec);
+                    uint64_t now_ns = (uint64_t)sec * 1000000000ULL + (uint64_t)nsec;
+                    if (now_ns >= sys_state->timerfd_expire_nsec) {
+                        epoll_event_abi_t *ev = &events[ready_count];
+                        ev->events = 1; // EPOLLIN
+                        ev->data = sys_state->timerfd_epoll_data;
+                        ready_count++;
+                    }
+                }
+
+                if (ready_count > 0) {
+                    sys_lock();
+                    return ready_count;
+                }
+
                 if (timeout == 0) {
                     sys_lock();
                     return 0; // Non-blocking poll returns 0 ready events
+                }
+                if (timeout > 0) {
+                    if (yields++ > timeout * 10) {
+                        sys_lock();
+                        return 0;
+                    }
                 }
                 seL4_Yield();
             }
@@ -1092,6 +1307,7 @@ static long do_syscall(long sysno, long a1, long a2, long a3, long a4, long a5, 
 
             sys_unlock(); // Release global spinlock while waiting for I/O
 
+            int yields = 0;
             for (;;) {
                 int ready = 0;
                 if (nfds > 0) {
@@ -1112,15 +1328,36 @@ static long do_syscall(long sysno, long a1, long a2, long a3, long a4, long a5, 
 
                         if (r_ready || w_ready) ready++;
                     }
-                    if (ready > 0) {
+                }
+                
+                if (ready > 0) {
+                    sys_lock();
+                    return ready;
+                }
+
+                if (timeout_ts) {
+                    if (timeout_ts->tv_sec == 0 && timeout_ts->tv_nsec == 0) {
                         sys_lock();
-                        return ready;
+                        return 0;
+                    }
+                    if (yields++ > 100) {
+                        sys_lock();
+                        return 0;
                     }
                 }
-                if (timeout_ts && timeout_ts->tv_sec == 0 && timeout_ts->tv_nsec == 0) {
-                    sys_lock();
-                    return 0;
+
+                if (nfds == 0 && !timeout_ts) {
+                    for (;;) {
+                        if (console_ring && console_ring->rx_head != console_ring->rx_tail) {
+                            sys_lock();
+                            return 0;
+                        }
+                        sys_state->fake_timer_nsec += 1000000; // 1 ms
+                        seL4_Yield();
+                    }
                 }
+
+                sys_state->fake_timer_nsec += 1000000; // 1 ms
                 seL4_Yield();
             }
         }
@@ -1132,25 +1369,75 @@ static long do_syscall(long sysno, long a1, long a2, long a3, long a4, long a5, 
             return fd;
         }
 
-        case SYS_poll: {
-            struct pollfd_ptr { int fd; short events; short revents; } *fds = (void *)a1;
+        case SYS_poll: { // 73: SYS_ppoll on AArch64
+            struct pollfd_abi_t { int fd; short events; short revents; } *fds = (void *)a1;
             size_t nfds = (size_t)a2;
-            int ready = 0;
-            if (fds && nfds > 0) {
-                int has_data = console_ring && (console_ring->rx_tail != console_ring->rx_head);
-                for (size_t i = 0; i < nfds; i++) {
-                    if (fds[i].fd == 0 && has_data) {
-                        fds[i].revents = fds[i].events; // POLLIN
-                        if (fds[i].revents) ready++;
-                    } else if (fds[i].fd == 1 || fds[i].fd == 2) {
-                        fds[i].revents = fds[i].events & 0x0004; // POLLOUT is 4 in Linux
-                        if (fds[i].revents) ready++;
-                    } else {
+            const timespec_abi_t *tmo_p = (void *)a3;
+            
+            sys_unlock();
+            
+            int yields = 0;
+            for (;;) {
+                int ready = 0;
+                if (fds && nfds > 0) {
+                    int has_data = console_ring && (console_ring->rx_tail != console_ring->rx_head);
+                    for (size_t i = 0; i < nfds; i++) {
                         fds[i].revents = 0;
+                        int fd = fds[i].fd;
+                        if (fd < 0) continue;
+                        
+                        if (fd == 0) {
+                            if (has_data && (fds[i].events & 0x01)) fds[i].revents |= 0x01; // POLLIN
+                            if (fds[i].events & 0x04) fds[i].revents |= 0x04; // POLLOUT
+                        } else if (fd == 1 || fd == 2) {
+                            if (fds[i].events & 0x04) fds[i].revents |= 0x04; // POLLOUT
+                        } else if (fd >= 3 && fd < FD_MAX && sys_state->fd_table[fd].used) {
+                            fd_entry_t *e = (fd_entry_t *)&sys_state->fd_table[fd];
+                            if (e->file == &sys_state->dev_pipe_file) {
+                                if (e->pipe_read_fd >= 0) {
+                                    if (fds[i].events & 0x04) fds[i].revents |= 0x04;
+                                } else {
+                                    if (e->pipe_head != e->pipe_tail) {
+                                        if (fds[i].events & 0x01) fds[i].revents |= 0x01;
+                                    }
+                                }
+                            } else {
+                                if (fds[i].events & 0x01) fds[i].revents |= 0x01;
+                                if (fds[i].events & 0x04) fds[i].revents |= 0x04;
+                            }
+                        } else {
+                            fds[i].revents |= 0x20; // POLLNVAL
+                        }
+                        
+                        if (fds[i].revents) ready++;
                     }
                 }
+                
+                if (ready > 0) {
+                    sys_lock();
+                    return ready;
+                }
+                
+                if (tmo_p) {
+                    if (tmo_p->tv_sec == 0 && tmo_p->tv_nsec == 0) {
+                        sys_lock();
+                        return 0;
+                    }
+                    if (yields++ > 100000) {
+                        sys_lock();
+                        return 0;
+                    }
+                }
+                
+                if (sys_state->pending_notify != 0 && microkit_name[0] == 's' && microkit_name[1] == 'y' && microkit_name[2] == 'n') {
+                    uint32_t target_ch = sys_state->pending_notify;
+                    sys_state->pending_notify = 0;
+                    microkit_notify(target_ch);
+                }
+                
+                sys_state->fake_timer_nsec += 1000000; // 1 ms
+                seL4_Yield();
             }
-            return ready;
         }
 
         // ----------------------------------------------------------------
@@ -1165,9 +1452,9 @@ static long do_syscall(long sysno, long a1, long a2, long a3, long a4, long a5, 
 
             // fork() call (child_stack == NULL): fake it — return a synthetic PID
             // to the parent. We never actually duplicate execution.
-            if (child_stack == 0) {
-                microkit_dbg_puts("[synrc] SYS_clone: fork() -> returning fake child PID\n");
-                return 1001; // fake child PID — child branch never runs
+            if ((flags & 0x11) == 0x11 || flags == 0x11 || flags == 0x1200011) { // fork() or vfork()
+                microkit_dbg_puts("[synrc] SYS_clone: fork() -> returning EAGAIN\n");
+                return -11; // EAGAIN
             }
 
             // In AArch64 Musl __clone, func and arg are saved on the child stack

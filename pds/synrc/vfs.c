@@ -24,7 +24,7 @@ typedef struct {
 
 #include "syscall_trap.h"
 
-#define VFS_MAX_FILES 256
+#define VFS_MAX_FILES 1024
 #define vfs_index (sys_state->vfs_index)
 #define vfs_file_count (sys_state->vfs_file_count)
 
@@ -113,6 +113,13 @@ void vfs_init(void) {
                 vfs_index[vfs_file_count].path = name;
                 vfs_index[vfs_file_count].data = data;
                 vfs_index[vfs_file_count].size = (size_t)filesize;
+
+                if (vfs_file_count < 10) {
+                    microkit_dbg_puts("[vfs] Found file: ");
+                    microkit_dbg_puts(name);
+                    microkit_dbg_puts("\n");
+                }
+
                 vfs_file_count++;
             }
         }
@@ -138,7 +145,6 @@ void vfs_init(void) {
     microkit_dbg_puts(" files indexed\n");
 }
 
-static vfs_file_t vfs_dir_dummy = { .path = "DIR", .data = 0, .size = 0 };
 
 const vfs_file_t *vfs_lookup(const char *path) {
     if (!path) return NULL;
@@ -147,23 +153,27 @@ const vfs_file_t *vfs_lookup(const char *path) {
     size_t match_len = str_len(match_path);
 
     int is_dir = 0;
-    for (int i = 0; i < vfs_file_count; i++) {
-        const char *p = vfs_index[i].path;
-        if (str_eq(match_path, p)) {
-            return (const vfs_file_t *)&vfs_index[i];
-        }
-        // Check if match_path is a directory prefix
-        // i.e. p starts with match_path + "/"
-        int prefix_match = 1;
-        for (size_t j = 0; j < match_len; j++) {
-            if (p[j] != match_path[j]) { prefix_match = 0; break; }
-        }
-        if (prefix_match && p[match_len] == '/') {
-            is_dir = 1;
+    if (match_len == 0) {
+        is_dir = 1;
+    } else {
+        for (int i = 0; i < vfs_file_count; i++) {
+            const char *p = vfs_index[i].path;
+            if (str_eq(match_path, p)) {
+                return (const vfs_file_t *)&vfs_index[i];
+            }
+            // Check if match_path is a directory prefix
+            // i.e. p starts with match_path + "/"
+            int prefix_match = 1;
+            for (size_t j = 0; j < match_len; j++) {
+                if (p[j] != match_path[j]) { prefix_match = 0; break; }
+            }
+            if (prefix_match && p[match_len] == '/') {
+                is_dir = 1;
+            }
         }
     }
     
-    if (is_dir) return &vfs_dir_dummy;
+    if (is_dir) return &sys_state->dev_dir_file;
     return NULL;
 }
 
@@ -240,6 +250,10 @@ int vfs_getdents(const char *dir_path, uint8_t *buf, size_t count, size_t *offse
                     ent[19 + x] = seg_start[x];
                 }
                 ent[19 + seg_len] = '\0';
+                
+                microkit_dbg_puts("[vfs] getdents entry: ");
+                microkit_dbg_puts((const char *)(ent + 19));
+                microkit_dbg_puts("\n");
                 
                 // padding zeroed out
                 for (size_t x = 19 + seg_len + 1; x < reclen; x++) {

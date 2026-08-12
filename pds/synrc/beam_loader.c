@@ -73,6 +73,7 @@ static const char *beam_argv[] = {
     "-home", "/",
     "-boot", "/otp/bin/start",
     "-init_debug",
+    "-oldshell",
     0
 };
 static const int beam_argc = (sizeof(beam_argv) / sizeof(beam_argv[0])) - 1;

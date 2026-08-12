@@ -15,15 +15,23 @@ void tyn_syscall_init(void);
 typedef struct {
     const vfs_file_t *file;
     size_t offset;
-    int    used;
-    int    nonblock;
-    char   dir_path[128];
+    int used;
+    int nonblock;
+    char dir_path[128];
+    uint32_t pipe_head;
+    uint32_t pipe_tail;
+    uint8_t pipe_buf[32];
+    int epoll_registered;
+    int epoll_epfd;
+    uint32_t epoll_events;
+    uint64_t epoll_data;
+    int pipe_read_fd;
 } fd_entry_t;
 
 typedef struct {
     uint32_t events;
     uint64_t data;
-} __attribute__((packed)) epoll_event_abi_t;
+} epoll_event_abi_t;
 
 typedef struct {
     int64_t tv_sec;
@@ -51,6 +59,29 @@ typedef struct {
     int       epoll_stdin_epfd;
     uint32_t  epoll_stdin_events;
     uint64_t  epoll_stdin_data;
+    int       epoll_stdout_registered;
+    int       epoll_stdout_epfd;
+    uint32_t  epoll_stdout_events;
+    uint64_t  epoll_stdout_data;
+    int       epoll_stderr_registered;
+    int       epoll_stderr_epfd;
+    uint32_t  epoll_stderr_events;
+    uint64_t  epoll_stderr_data;
+    
+    int       timerfd_active;
+    uint64_t  timerfd_expire_nsec;
+    uint32_t timerfd_epoll_registered;
+    uint64_t timerfd_epoll_data;
+    
+    uint32_t pipe_head;
+    uint32_t pipe_tail;
+    uint8_t  pipe_buf[256];
+    uint32_t pipe_epoll_registered;
+    int      pipe_epoll_epfd;
+    uint32_t pipe_epoll_events;
+    uint64_t pipe_epoll_data;
+    int pipe_read_fd;
+    
     futex_waiter_t futex_waiters[16];
     vfs_file_t dev_null_file;
     vfs_file_t dev_dir_file;
