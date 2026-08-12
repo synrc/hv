@@ -1383,6 +1383,16 @@ static long do_syscall(long sysno, long a1, long a2, long a3, long a4, long a5, 
             size_t nfds = (size_t)a2;
             const timespec_abi_t *tmo_p = (void *)a3;
             
+            if (fds && nfds > 0) {
+                microkit_dbg_puts("[synrc] SYS_ppoll nfds=");
+                puthex64(nfds);
+                microkit_dbg_puts(" fd0=");
+                puthex64(fds[0].fd);
+                microkit_dbg_puts(" events=");
+                puthex64(fds[0].events);
+                microkit_dbg_puts("\n");
+            }
+            
             sys_unlock();
             
             int yields = 0;
