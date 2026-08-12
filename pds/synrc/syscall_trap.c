@@ -182,6 +182,7 @@ static int fd_alloc(const vfs_file_t *f, const char *dir_path) {
             sys_state->fd_table[i].pipe_head = 0;
             sys_state->fd_table[i].pipe_tail = 0;
             sys_state->fd_table[i].epoll_registered = 0;
+            sys_state->fd_table[i].epoll_epfd = -1;
             sys_state->fd_table[i].pipe_read_fd = -1;
             if (dir_path) {
                 tyn_strncpy((char *)sys_state->fd_table[i].dir_path, dir_path, 128);
@@ -773,17 +774,25 @@ static long do_syscall(long sysno, long a1, long a2, long a3, long a4, long a5, 
             return -9; // EBADF
         }
 
-        case SYS_readlink: {
-            const char *buf = (char *)a2;
-            size_t bufsiz = (size_t)a3;
+        case SYS_readlink: { // readlinkat (dirfd, pathname, buf, bufsiz)
+            const char *pathname = (const char *)a2;
+            char *buf = (char *)a3;
+            size_t bufsiz = (size_t)a4;
+            
+            microkit_dbg_puts("[synrc] readlinkat: ");
+            microkit_dbg_puts(pathname);
+            microkit_dbg_puts("\n");
+            
             const char *exe = "/otp/erts-9.3/bin/beam";
-            size_t len = 0;
-            while (exe[len]) len++;
-            if (len >= bufsiz) len = bufsiz - 1;
-            char *out = (char *)buf;
-            for (size_t i = 0; i < len; i++) out[i] = exe[i];
-            out[len] = '\0';
-            return (long)len;
+            if (pathname && pathname[0] == '/' && pathname[1] == 'p' && pathname[2] == 'r' && pathname[3] == 'o' && pathname[4] == 'c' && pathname[5] == '/' && pathname[6] == 's' && pathname[7] == 'e' && pathname[8] == 'l' && pathname[9] == 'f' && pathname[10] == '/' && pathname[11] == 'e' && pathname[12] == 'x' && pathname[13] == 'e') {
+                size_t len = 0;
+                while (exe[len]) len++;
+                if (len >= bufsiz) len = bufsiz - 1;
+                for (size_t i = 0; i < len; i++) buf[i] = exe[i];
+                buf[len] = '\0';
+                return (long)len;
+            }
+            return -2; // ENOENT
         }
 
         // ----------------------------------------------------------------
@@ -1453,7 +1462,9 @@ static long do_syscall(long sysno, long a1, long a2, long a3, long a4, long a5, 
             // fork() call (child_stack == NULL): fake it — return a synthetic PID
             // to the parent. We never actually duplicate execution.
             if ((flags & 0x11) == 0x11 || flags == 0x11 || flags == 0x1200011) { // fork() or vfork()
-                microkit_dbg_puts("[synrc] SYS_clone: fork() -> returning EAGAIN\n");
+                microkit_dbg_puts("[synrc] SYS_clone: fork() flags=");
+                puthex64(flags);
+                microkit_dbg_puts(" -> returning EAGAIN\n");
                 return -11; // EAGAIN
             }
 
