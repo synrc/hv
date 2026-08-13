@@ -160,7 +160,7 @@ static void elf_enter(uintptr_t entry, uintptr_t sp_base,
 // ELF loader + launch
 // -------------------------------------------------------------------------
 void beam_loader_start(void) {
-    microkit_dbg_puts("[synrc] Transferring execution to real BEAM executable (third_party/tyn/src/beam.smp.elf)...\n");
+    microkit_dbg_puts("[synrc] Transferring execution to real BEAM executable (beam.aarch64.elf)...\n");
 
     const uint8_t *elf = BEAM_ELF_BASE;
 

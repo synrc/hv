@@ -115,8 +115,8 @@ ERL_TOP="$BUILD_DIR/otp" make -j"$(nproc 2>/dev/null || sysctl -n hw.logicalcpu)
 # Find the beam binary
 BEAM_BIN=""
 for candidate in \
-    "bin/aarch64-unknown-linux-musl/beam" \
     "bin/aarch64-linux-musl/beam" \
+    "bin/aarch64-unknown-linux-musl/beam" \
     "erts/bin/beam"; do
     if [ -f "$candidate" ]; then
         BEAM_BIN="$candidate"
@@ -130,8 +130,8 @@ if [ -z "$BEAM_BIN" ]; then
     exit 1
 fi
 
-echo "[build-beam-aarch64] Stripping $BEAM_BIN -> $OUT_ELF"
-aarch64-linux-musl-strip "$BEAM_BIN" -o "$OUT_ELF"
+# echo "[build-beam-aarch64] Stripping $BEAM_BIN -> $OUT_ELF"
+# aarch64-linux-musl-strip "$BEAM_BIN" -o "$OUT_ELF"
 
 # Build OTP 20 rootfs cpio (unversioned paths: /otp/lib/kernel/ebin/, /otp/lib/stdlib/ebin/)
 echo "[build-beam-aarch64] Building OTP 20 rootfs cpio..."
@@ -146,7 +146,6 @@ mkdir -p "$STAGING/otp/bin" \
 BOOT=""
 for b in \
     "$BUILD_DIR/otp/bin/start.boot" \
-    "$BUILD_DIR/otp/lib/kernel/src/start.boot" \
     "$BUILD_DIR/otp/bootstrap/bin/start.boot"; do
     [ -f "$b" ] && BOOT="$b" && break
 done
@@ -172,7 +171,7 @@ done
 cd "$STAGING"
 find otp -type f | sort | cpio -o -H newc > "$OUT_CPIO"
 echo "[build-beam-aarch64] OTP 20 rootfs: $OUT_CPIO ($(ls -lh "$OUT_CPIO" | awk '{print $5}'))"
-cpio -t < "$OUT_CPIO" | grep -E "start\.boot|kernel\.beam|stdlib\.beam" | head -5
+cpio -t < "$OUT_CPIO" | grep -E "start\.boot|kernel\.beam|stdlib\.beam|compiler\.beam" | head -5
 
 echo "[build-beam-aarch64] Done: $OUT_ELF"
 ls -lh "$OUT_ELF"
