@@ -1,3 +1,0 @@
-arm_64bit=1
-kernel=kernel8.img
-enable_uart=1

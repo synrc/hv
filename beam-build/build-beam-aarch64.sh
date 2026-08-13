@@ -8,7 +8,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 OUT_ELF="$REPO_ROOT/build/beam.aarch64.elf"
-BUILD_DIR="$REPO_ROOT/build/otp29-aarch64"
+BUILD_DIR="$REPO_ROOT/build/otp20-aarch64"
 
 CROSS_GCC="$(command -v aarch64-linux-musl-gcc 2>/dev/null || true)"
 if [ -z "$CROSS_GCC" ]; then
@@ -21,13 +21,10 @@ echo "[build-beam-aarch64] Using cross-compiler: $CROSS_GCC"
 mkdir -p "$BUILD_DIR"
 cd "$BUILD_DIR"
 
-# Download OTP 29.0.5 if not already present
+# Clone OTP 20.3 if not already present
 if [ ! -d otp ]; then
-    echo "[build-beam-aarch64] Downloading OTP-29.0.5..."
-    curl -L -s -o otp.tar.gz https://github.com/erlang/otp/archive/refs/tags/OTP-29.0.5.tar.gz
-    mkdir -p otp
-    tar -xf otp.tar.gz -C otp --strip-components=1
-    rm otp.tar.gz
+    echo "[build-beam-aarch64] Cloning OTP-20.3.8.26..."
+    git clone --depth 1 --branch OTP-20.3.8.26 https://github.com/erlang/otp.git otp
 fi
 
 cd otp
@@ -36,24 +33,6 @@ cd otp
 if [ ! -f erts/configure ]; then
     echo "[build-beam-aarch64] Running otp_build autoconf..."
     ./otp_build autoconf
-fi
-
-echo "[build-beam-aarch64] Building LibreSSL 3.9.2..."
-LIBRESSL_SRC="$REPO_ROOT/third_party/libressl-3.9.2"
-LIBRESSL_PREFIX="$BUILD_DIR/libressl"
-if [ ! -f "$LIBRESSL_PREFIX/lib/libcrypto.a" ]; then
-    cd "$LIBRESSL_SRC"
-    # Clean any previous builds
-    make clean || true
-    CC="$CROSS_GCC" CFLAGS="-O2 -fPIC -static" ./configure \
-        --host=aarch64-linux-musl \
-        --prefix="$LIBRESSL_PREFIX" \
-        --disable-shared \
-        --enable-static \
-        --with-openssldir="$LIBRESSL_PREFIX/etc/ssl"
-    make
-    make install
-    cd "$BUILD_DIR/otp"
 fi
 
 # Propagate config.guess / config.sub to all sub-library configure directories.
@@ -94,97 +73,51 @@ done
 # the emulator and fail on cross-compilation (snmp, megaco, corba, etc).
 # Removing their configure file is the safest approach: lib/configure
 # only descends into a subdir if its configure file exists.
-# Disable optional sub-library configure scripts that are not needed
 echo "[build-beam-aarch64] Disabling optional library configure scripts..."
 for lib in snmp megaco odbc cosEvent cosEventDomain cosFileTransfer \
             cosNotification cosProperty cosTime cosTransactions wx diameter; do
     rm -f "lib/$lib/configure"
 done
 
-
-
-# Configure for AArch64 musl static
-echo "[build-beam-aarch64] Configuring OTP 29.0.5 for aarch64-linux-musl..."
-# Cache sizeof answers for cross-compilation — configure can't run test programs.
-# aarch64 musl has 64-bit off_t and long.
-ac_cv_sizeof_off_t=8 \
-ac_cv_sizeof_long=8 \
+# Configure for AArch64 musl static — non-SMP, no threads, no HiPE, no termcap
+# -std=gnu89: OTP 20 / zlib use old K&R-style function definitions
+# -Wno-old-style-definition: suppress warnings that become errors with newer GCC
+echo "[build-beam-aarch64] Configuring OTP 20 for aarch64-linux-musl..."
 ERL_TOP="$BUILD_DIR/otp" \
 CC="$CROSS_GCC" \
-CFLAGS="-O2 -static -fcommon -Wno-error -Wno-unused-function -DASSUMED_CACHE_LINE_SIZE=64 -DERTS_NO_RETPOLINE=" \
+CFLAGS="-O2 -static -fcommon -std=gnu89 -Wno-old-style-definition" \
 LDFLAGS="-static" \
 ./configure \
     --host=aarch64-linux-musl \
     --build=x86_64-apple-darwin \
-    --disable-year2038 \
+    --disable-smp-support \
+    --disable-threads \
+    --disable-hipe \
     --without-termcap \
-    --with-ssl="$LIBRESSL_PREFIX" \
+    --without-ssl \
     --without-wx \
     --without-odbc \
     --without-javac \
-    --without-docs \
-    --disable-jit
+    --without-docs
 
-# Remove stale depend.mk files — a previously killed build can leave NUL bytes
-# that corrupt make's dependency parser on the next run.
-find "$BUILD_DIR/otp/erts/emulator" -name "depend.mk" -delete 2>/dev/null || true
-
-# Build the emulator only (pass TARGET to avoid picking up the host darwin triple)
-# Single line — no continuation: avoids trailing-space-after-backslash issues.
+# Build the emulator only
 echo "[build-beam-aarch64] Building emulator (this takes a few minutes)..."
-NCPU="$(nproc 2>/dev/null || sysctl -n hw.logicalcpu)"
-ERL_TOP="$BUILD_DIR/otp" make -j"$NCPU" -C erts/emulator TARGET=aarch64-unknown-linux-musl
+ERL_TOP="$BUILD_DIR/otp" make -j"$(nproc 2>/dev/null || sysctl -n hw.logicalcpu)" emulator
 
 # Also build the Erlang/OTP library .beam files using the host erlc
 # (these are platform-independent BEAM bytecode, so host compiler works)
-echo "[build-beam-aarch64] Building OTP apps..."
-APPS=$(cat "$SCRIPT_DIR/apps.config" | grep -o '\[.*\]' | tr -d '[],')
+echo "[build-beam-aarch64] Building OTP kernel/stdlib libraries..."
+ERL_TOP="$BUILD_DIR/otp" make -j"$(nproc 2>/dev/null || sysctl -n hw.logicalcpu)" \
+    -C "$BUILD_DIR/otp/lib/kernel" opt 2>/dev/null || true
+ERL_TOP="$BUILD_DIR/otp" make -j"$(nproc 2>/dev/null || sysctl -n hw.logicalcpu)" \
+    -C "$BUILD_DIR/otp/lib/stdlib" opt 2>/dev/null || true
 
-# Manually configure crypto and ssl before building them.
-# --with-ssl-incl bypasses the cross-sysroot check and tells the lib configure
-# exactly where to find OpenSSL/LibreSSL headers.
-# NOTE: NIFs build as .so (shared), so no -static or pthread_stub.o in LDFLAGS here.
-for lib in crypto ssl; do
-    if [ -f "$BUILD_DIR/otp/lib/$lib/configure" ]; then
-        echo "Configuring $lib..."
-        cd "$BUILD_DIR/otp/lib/$lib"
-        ERL_TOP="$BUILD_DIR/otp" \
-        CC="$CROSS_GCC" \
-        CFLAGS="-O2 -fcommon -I$LIBRESSL_PREFIX/include" \
-        LDFLAGS="-L$LIBRESSL_PREFIX/lib" \
-        ./configure \
-            --host=aarch64-linux-musl \
-            --build=x86_64-apple-darwin \
-            --with-ssl="$LIBRESSL_PREFIX" \
-            --with-ssl-incl="$LIBRESSL_PREFIX/include" \
-            --disable-dynamic-ssl-lib
-    fi
-done
-cd "$BUILD_DIR"
-
-export ERL_COMPILER_OPTIONS="[]"
-
-for app in $APPS; do
-    if [ -d "$BUILD_DIR/otp/lib/$app" ]; then
-        echo "Building $app..."
-        ERL_TOP="$BUILD_DIR/otp" make -j"$(nproc 2>/dev/null || sysctl -n hw.logicalcpu)" \
-            TARGET="aarch64-unknown-linux-musl" \
-            CFLAGS="-O2 -static -fcommon -I$LIBRESSL_PREFIX/include" \
-            -C "$BUILD_DIR/otp/lib/$app" opt || echo "WARNING: $app build failed, continuing..."
-    fi
-done
-
-# Find the beam binary — OTP 29 JIT produces beam.jit (installed as beam.smp)
+# Find the beam binary
 BEAM_BIN=""
 for candidate in \
-    "$BUILD_DIR/otp/bin/aarch64-unknown-linux-musl/beam.smp" \
-    "$BUILD_DIR/otp/bin/aarch64-unknown-linux-musl/beam.jit" \
-    "$BUILD_DIR/otp/bin/aarch64-unknown-linux-musl/beam" \
-    "$BUILD_DIR/otp/bin/aarch64-linux-musl/beam.smp" \
-    "$BUILD_DIR/otp/bin/aarch64-linux-musl/beam" \
-    "$BUILD_DIR/otp/erts/emulator/obj/aarch64-unknown-linux-musl/opt/smp/beam.smp" \
-    "$BUILD_DIR/otp/erts/bin/aarch64-unknown-linux-musl/beam.smp" \
-    "$BUILD_DIR/otp/erts/bin/beam"; do
+    "bin/aarch64-unknown-linux-musl/beam" \
+    "bin/aarch64-linux-musl/beam" \
+    "erts/bin/beam"; do
     if [ -f "$candidate" ]; then
         BEAM_BIN="$candidate"
         break
@@ -193,60 +126,52 @@ done
 
 if [ -z "$BEAM_BIN" ]; then
     echo "[build-beam-aarch64] ERROR: beam binary not found after build. Files:"
-    find "$BUILD_DIR/otp/bin" "$BUILD_DIR/otp/erts/bin" \
-        \( -name "beam.smp" -o -name "beam.jit" -o -name "beam" \) -type f 2>/dev/null || true
+    find . -name "beam" -type f 2>/dev/null || true
     exit 1
 fi
 
 echo "[build-beam-aarch64] Stripping $BEAM_BIN -> $OUT_ELF"
 aarch64-linux-musl-strip "$BEAM_BIN" -o "$OUT_ELF"
 
-# Build OTP 29 rootfs cpio (unversioned paths: /otp/lib/kernel/ebin/, /otp/lib/stdlib/ebin/)
-echo "[build-beam-aarch64] Building OTP 29 rootfs cpio..."
-OUT_CPIO="$REPO_ROOT/build/otp-rootfs-29.cpio"
+# Build OTP 20 rootfs cpio (unversioned paths: /otp/lib/kernel/ebin/, /otp/lib/stdlib/ebin/)
+echo "[build-beam-aarch64] Building OTP 20 rootfs cpio..."
+OUT_CPIO="$REPO_ROOT/build/otp-rootfs-20.cpio"
 STAGING="$BUILD_DIR/rootfs-staging"
 # rm -rf "$STAGING"
 mkdir -p "$STAGING/otp/bin" \
          "$STAGING/otp/lib/kernel/ebin" \
          "$STAGING/otp/lib/stdlib/ebin"
 
-APPS=$(cat "$SCRIPT_DIR/apps.config" | grep -o '\[.*\]' | tr -d '[],')
+# start.boot — generated during emulator build
+BOOT=""
+for b in \
+    "$BUILD_DIR/otp/bin/start.boot" \
+    "$BUILD_DIR/otp/lib/kernel/src/start.boot" \
+    "$BUILD_DIR/otp/bootstrap/bin/start.boot"; do
+    [ -f "$b" ] && BOOT="$b" && break
+done
+if [ -n "$BOOT" ]; then
+    cp "$BOOT" "$STAGING/otp/bin/"
+fi
 
-# 1. Package .beam files from lib sources (or bootstrap fallback)
-rm -rf "$STAGING/otp/lib"
-mkdir -p "$STAGING/otp/lib"
-for dir in $APPS; do
+# .beam files from lib sources (or bootstrap fallback)
+for dir in kernel stdlib compiler; do
     SRC="$BUILD_DIR/otp/lib/$dir/ebin"
-    # Fall back to bootstrap if the built ebin has no beams
-    if [ -z "$(ls "$SRC"/*.beam 2>/dev/null)" ]; then
+    if [ ! -d "$SRC" ] || [ -z "$(ls -A "$SRC"/*.beam 2>/dev/null)" ]; then
         SRC="$BUILD_DIR/otp/bootstrap/lib/$dir/ebin"
     fi
     DST="$STAGING/otp/lib/$dir/ebin"
     mkdir -p "$DST"
     if [ -d "$SRC" ]; then
-        # cp -f directly — avoids pipe subshell masking errors
-        cp -f "$SRC"/*.beam "$DST/" 2>/dev/null || true
-        cp -f "$SRC"/*.app  "$DST/" 2>/dev/null || true
-        cp -f "$SRC"/*.appup "$DST/" 2>/dev/null || true
-        echo "  Staged $dir: $(ls "$DST"/*.beam 2>/dev/null | wc -l | tr -d ' ') beams"
-    else
-        echo "  WARNING: no ebin found for $dir"
+        find "$SRC" \( -name "*.beam" -o -name "*.app" -o -name "*.appup" \) | while read -r f; do
+            cp -f "$f" "$DST/"
+        done
     fi
 done
 
-# 2. Dynamically generate start.boot using custom generator
-echo "[build-beam-aarch64] Generating custom start.boot..."
-# Compile to REPO_ROOT so erl -run finds it in the current directory (default code path).
-# Without this, a stale make_boot.beam in the project root would be loaded instead.
-erlc -o "$REPO_ROOT" "$REPO_ROOT/beam-build/make_boot.erl"
-if ! erl -noshell -pa "$REPO_ROOT" -run make_boot main "$STAGING" "$REPO_ROOT/beam-build/apps.config"; then
-    echo "ERROR: Failed to generate start.boot!"
-    exit 1
-fi
-
-# Run cpio from inside STAGING so paths are relative (macOS BSD cpio has no -D)
-(cd "$STAGING" && find otp -type f | sort | cpio -o -H newc) > "$OUT_CPIO"
-echo "[build-beam-aarch64] OTP 29 rootfs: $OUT_CPIO ($(ls -lh "$OUT_CPIO" | awk '{print $5}'))"
+cd "$STAGING"
+find otp -type f | sort | cpio -o -H newc > "$OUT_CPIO"
+echo "[build-beam-aarch64] OTP 20 rootfs: $OUT_CPIO ($(ls -lh "$OUT_CPIO" | awk '{print $5}'))"
 cpio -t < "$OUT_CPIO" | grep -E "start\.boot|kernel\.beam|stdlib\.beam" | head -5
 
 echo "[build-beam-aarch64] Done: $OUT_ELF"

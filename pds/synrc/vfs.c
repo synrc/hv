@@ -22,11 +22,9 @@ typedef struct {
     char c_check[8];
 } cpio_newc_header_t;
 
-#include "syscall_trap.h"
-
-#define VFS_MAX_FILES 1024
-#define vfs_index (sys_state->vfs_index)
-#define vfs_file_count (sys_state->vfs_file_count)
+#define VFS_MAX_FILES 256
+static vfs_file_t vfs_index[VFS_MAX_FILES];
+static int vfs_file_count = 0;
 
 // Base address of the OTP rootfs cpio (mapped via tyn-beam.system otp_rootfs region)
 static const uint8_t *cpio_base = (const uint8_t *)0x54000000;
@@ -113,13 +111,6 @@ void vfs_init(void) {
                 vfs_index[vfs_file_count].path = name;
                 vfs_index[vfs_file_count].data = data;
                 vfs_index[vfs_file_count].size = (size_t)filesize;
-
-                if (vfs_file_count < 10) {
-                    microkit_dbg_puts("[vfs] Found file: ");
-                    microkit_dbg_puts(name);
-                    microkit_dbg_puts("\n");
-                }
-
                 vfs_file_count++;
             }
         }
@@ -143,17 +134,9 @@ void vfs_init(void) {
     num[pos] = '\0';
     microkit_dbg_puts(num);
     microkit_dbg_puts(" files indexed\n");
-    for (int i = 0; i < vfs_file_count; i++) {
-        const char *p = vfs_index[i].path;
-        if ((p[0]=='o' && p[1]=='t' && p[2]=='p' && p[3]=='/' && p[4]=='b' && p[5]=='i' && p[6]=='n') ||
-            (p[0]=='s' && p[1]=='t' && p[2]=='a' && p[3]=='r' && p[4]=='t')) {
-            microkit_dbg_puts("[cpio-match] ");
-            microkit_dbg_puts(p);
-            microkit_dbg_puts("\n");
-        }
-    }
 }
 
+static vfs_file_t vfs_dir_dummy = { .path = "DIR", .data = 0, .size = 0 };
 
 const vfs_file_t *vfs_lookup(const char *path) {
     if (!path) return NULL;
@@ -162,54 +145,24 @@ const vfs_file_t *vfs_lookup(const char *path) {
     size_t match_len = str_len(match_path);
 
     int is_dir = 0;
-    if (match_len == 0) {
-        is_dir = 1;
-    } else {
-        for (int i = 0; i < vfs_file_count; i++) {
-            const char *p = vfs_index[i].path;
-            if (str_eq(match_path, p)) {
-                microkit_dbg_puts("[vfs] Lookup file: ");
-                microkit_dbg_puts(p);
-                microkit_dbg_puts("\n");
-                return (const vfs_file_t *)&vfs_index[i];
-            }
-            // Check if match_path is a directory prefix
-            // i.e. p starts with match_path + "/"
-            int prefix_match = 1;
-            for (size_t j = 0; j < match_len; j++) {
-                if (p[j] != match_path[j]) { prefix_match = 0; break; }
-            }
-            if (prefix_match && p[match_len] == '/') {
-                is_dir = 1;
-            }
+    for (int i = 0; i < vfs_file_count; i++) {
+        const char *p = vfs_index[i].path;
+        if (str_eq(match_path, p)) {
+            return &vfs_index[i];
+        }
+        // Check if match_path is a directory prefix
+        // i.e. p starts with match_path + "/"
+        int prefix_match = 1;
+        for (size_t j = 0; j < match_len; j++) {
+            if (p[j] != match_path[j]) { prefix_match = 0; break; }
+        }
+        if (prefix_match && p[match_len] == '/') {
+            is_dir = 1;
         }
     }
     
-    if (is_dir) return &sys_state->dev_dir_file;
+    if (is_dir) return &vfs_dir_dummy;
     return NULL;
-}
-
-static uint8_t dynamic_vfs_buffers[16][65536];
-static char dynamic_vfs_paths[16][128];
-static int dynamic_vfs_count = 0;
-
-const vfs_file_t *vfs_create_file(const char *path) {
-    if (!path || vfs_file_count >= VFS_MAX_FILES || dynamic_vfs_count >= 16) return NULL;
-    const vfs_file_t *existing = vfs_lookup(path);
-    if (existing && existing != &sys_state->dev_dir_file) return existing;
-
-    int idx = dynamic_vfs_count++;
-    const char *p = (path[0] == '/') ? path + 1 : path;
-    size_t l = str_len(p);
-    if (l >= 127) l = 127;
-    for (size_t i = 0; i < l; i++) dynamic_vfs_paths[idx][i] = p[i];
-    dynamic_vfs_paths[idx][l] = '\0';
-
-    int slot = vfs_file_count++;
-    vfs_index[slot].path = dynamic_vfs_paths[idx];
-    vfs_index[slot].data = dynamic_vfs_buffers[idx];
-    vfs_index[slot].size = 0;
-    return (const vfs_file_t *)&vfs_index[slot];
 }
 
 int vfs_getdents(const char *dir_path, uint8_t *buf, size_t count, size_t *offset_ptr) {
@@ -285,10 +238,6 @@ int vfs_getdents(const char *dir_path, uint8_t *buf, size_t count, size_t *offse
                     ent[19 + x] = seg_start[x];
                 }
                 ent[19 + seg_len] = '\0';
-                
-                microkit_dbg_puts("[vfs] getdents entry: ");
-                microkit_dbg_puts((const char *)(ent + 19));
-                microkit_dbg_puts("\n");
                 
                 // padding zeroed out
                 for (size_t x = 19 + seg_len + 1; x < reclen; x++) {

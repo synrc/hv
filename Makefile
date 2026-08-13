@@ -2,7 +2,7 @@
 
 MICROKIT_SDK ?= third_party/microkit-sdk-2.3.0
 BOARD        ?= qemu_virt_aarch64
-CONFIG       ?= smp-debug
+CONFIG       ?= debug
 SYSTEM       ?= synrc-beam
 TARGET       ?= aarch64-none-elf
 
@@ -45,14 +45,7 @@ $(BUILD_DIR)/synrc.elf: pds/synrc/synrc_main.c pds/synrc/syscall_trap.c pds/synr
 	$(CC) $(CFLAGS) -c pds/synrc/beam_emulator.c -o $(BUILD_DIR)/beam_emulator.o
 	$(LD) $(BUILD_DIR)/synrc_main.o $(BUILD_DIR)/syscall_trap.o $(BUILD_DIR)/vfs.o $(BUILD_DIR)/beam_loader.o $(BUILD_DIR)/beam_emulator.o $(LDFLAGS) -o $@
 
-WORKER_ELFS = beam_sched.elf beam_dirty_cpu.elf beam_dirty_io.elf beam_poll.elf beam_rq_super.elf beam_aux.elf beam_worker6.elf beam_worker7.elf
-
-$(BUILD_DIR)/%.elf: pds/synrc/%.c $(BUILD_DIR)/vfs.o
-	@mkdir -p $(BUILD_DIR)
-	$(CC) $(CFLAGS) -c $< -o $(BUILD_DIR)/$*.o
-	$(LD) $(BUILD_DIR)/$*.o $(BUILD_DIR)/vfs.o $(LDFLAGS) -o $@
-
-$(BUILD_DIR)/loader.img: $(BUILD_DIR)/hello.elf $(BUILD_DIR)/console.elf $(BUILD_DIR)/monitor.elf $(BUILD_DIR)/synrc.elf $(patsubst %,$(BUILD_DIR)/%,$(WORKER_ELFS)) systems/$(SYSTEM).system
+$(BUILD_DIR)/loader.img: $(BUILD_DIR)/hello.elf $(BUILD_DIR)/console.elf $(BUILD_DIR)/monitor.elf $(BUILD_DIR)/synrc.elf systems/$(SYSTEM).system
 	$(MICROKIT) systems/$(SYSTEM).system \
 	  --search-path $(BUILD_DIR) \
 	  --board $(BOARD) \
@@ -60,7 +53,8 @@ $(BUILD_DIR)/loader.img: $(BUILD_DIR)/hello.elf $(BUILD_DIR)/console.elf $(BUILD
 	  -o $@
 
 BEAM_ELF  = build/beam.aarch64.elf
-BEAM_CPIO = $(or $(wildcard build/otp-rootfs-29.cpio),build/otp-rootfs.cpio)
+# Prefer OTP 20 rootfs (unversioned paths); fall back to original OTP 26 cpio
+BEAM_CPIO = $(or $(wildcard build/otp-rootfs-20.cpio),build/otp-rootfs.cpio)
 
 # Option A: QEMU -device loader (default)
 # Loads beam.aarch64.elf at 0x50000000 and otp-rootfs.cpio at 0x54000000
@@ -76,8 +70,7 @@ run: all
 	qemu-system-aarch64 \
 	  -machine virt,virtualization=on,gic-version=2 \
 	  -cpu cortex-a53 \
-	  -m 4096M \
-	  -smp 4 \
+	  -m 2048M \
 	  -nographic \
 	  -serial mon:stdio \
 	  -kernel $(BUILD_DIR)/loader.img \
