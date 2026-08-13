@@ -1,0 +1,33 @@
+diff --git a/erts/emulator/drivers/common/inet_drv.c b/erts/emulator/drivers/common/inet_drv.c
+index f6de343..c108c52 100644
+--- a/erts/emulator/drivers/common/inet_drv.c
++++ b/erts/emulator/drivers/common/inet_drv.c
+@@ -1373,20 +1373,28 @@ struct erl_drv_entry inet_driver_entry =
+ #if HAVE_IN6
+ #  if ! defined(HAVE_IN6ADDR_ANY) || ! HAVE_IN6ADDR_ANY
+ #    if HAVE_DECL_IN6ADDR_ANY_INIT
++#if 0
+ static const struct in6_addr in6addr_any = { { IN6ADDR_ANY_INIT } };
++#endif
+ #    else
++#if 0
+ static const struct in6_addr in6addr_any =
+     { { { 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 } } };
++#endif
+ #    endif /* HAVE_IN6ADDR_ANY_INIT */
+ #  endif /* ! HAVE_DECL_IN6ADDR_ANY */
+ 
+ #  if ! defined(HAVE_IN6ADDR_LOOPBACK) || ! HAVE_IN6ADDR_LOOPBACK
+ #    if HAVE_DECL_IN6ADDR_LOOPBACK_INIT
++#if 0
+ static const struct in6_addr in6addr_loopback =
+     { { IN6ADDR_LOOPBACK_INIT } };
++#endif
+ #    else
++#if 0
+ static const struct in6_addr in6addr_loopback =
+     { { { 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1 } } };
++#endif
+ #    endif /* HAVE_IN6ADDR_LOOPBACk_INIT */
+ #  endif /* ! HAVE_DECL_IN6ADDR_LOOPBACK */
+ #endif /* HAVE_IN6 */

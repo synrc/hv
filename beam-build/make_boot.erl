@@ -53,7 +53,7 @@ main([StagingDir, AppsConfig]) ->
       ++ [{progress, modules_loaded}] ++ Paths ++ [
         {kernelProcess, error_logger, {error_logger, start_link, []}},
         {kernelProcess, application_controller, {application_controller, start, [{application, kernel, KernelOpts}]}},
-        {kernelProcess, user, {user, start, []}},
+%        {kernelProcess, user, {user, start, []}},
         {progress, init_kernel_started},
         {apply, {application, load, [{application, stdlib, StdlibOpts}]}}
     ] ++ lists:flatten([
