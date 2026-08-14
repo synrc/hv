@@ -1,0 +1,13 @@
+diff --git a/erts/configure.in b/erts/configure.in
+index 4a4f478..995bdb1 100644
+--- a/erts/configure.in
++++ b/erts/configure.in
+@@ -3906,7 +3906,7 @@ case $host_os in
+ 	darwin*)
+ 		# Mach-O linker: a shared lib and a loadable
+ 		# object file is not the same thing.
+-		DED_LDFLAGS="-bundle -bundle_loader ${ERL_TOP}/bin/$host/beam.smp"
++		DED_LDFLAGS="-bundle -bundle_loader ${ERL_TOP}/bin/$host/beam"
+ 		case $ARCH in
+ 			amd64)
+ 				DED_LDFLAGS="-m64 $DED_LDFLAGS"

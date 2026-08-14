@@ -3,15 +3,22 @@
 # and generating start.boot via make_boot.erl.
 #
 # Output prefix: build/otp20-host/install/
+
+export CC=/opt/homebrew/opt/llvm/bin/clang
+export CXX=/opt/homebrew/opt/llvm/bin/clang++
+export CFLAGS="-std=gnu89 -Wno-old-style-definition -arch arm64 -O2 -g"
+export CXXFLAGS="-std=gnu++98 -arch arm64 -O2 -g"
+export LDFLAGS="-arch arm64"
+
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=common.sh
 source "$SCRIPT_DIR/common.sh"
 REPO_ROOT="$(beam_build_root)"
 HOST_DIR="$REPO_ROOT/build/otp20-host"
-OTP_SRC="$HOST_DIR/otp"
 HOST_INSTALL="$HOST_DIR/install"
 HOST_ERL="$HOST_INSTALL/bin/erl"
+OTP_SRC="$HOST_DIR/otp"
 OTP_TAG="OTP-20.3.8.26"
 NCPU="$(beam_build_ncpu)"
 
@@ -23,14 +30,7 @@ fi
 echo "[build-host-otp20] Building native OTP 20 host at $HOST_INSTALL"
 
 # OTP 20 configure rejects native builds when SDK > deployment target.
-export MACOSX_DEPLOYMENT_TARGET="${MACOSX_DEPLOYMENT_TARGET:-$(sw_vers -productVersion)}"
-
-# Force modern Apple Silicon 64-bit toolchain.
-export CC="${CC:-clang}"
-export CXX="${CXX:-clang++}"
-export CFLAGS="-std=gnu89 -Wno-old-style-definition -arch arm64 -O2 -g ${CFLAGS:-}"
-export CXXFLAGS="-std=gnu++98 -arch arm64 -O2 -g ${CXXFLAGS:-}"
-export LDFLAGS="-arch arm64 ${LDFLAGS:-}"
+export MACOSX_DEPLOYMENT_TARGET="${MACOSX_DEPLOYMENT_TARGET:-13.0}"
 
 mkdir -p "$HOST_DIR"
 SSL_ARGS=()
@@ -82,6 +82,11 @@ done
 
 fix_otp20_macos_configure "$OTP_SRC/configure"
 
+# Do not reuse state from a failed configure attempt.
+rm -f "$OTP_SRC/erts/config.cache" "$OTP_SRC/erts/config.status" "$OTP_SRC/erts/config.log"
+rm -f "$OTP_SRC/Makefile" "$OTP_SRC/make/output.mk"
+rm -f "$HOST_DIR/.configured-host"
+
 # -------------------------------------------------------------------------
 # Host-only patches (IPv6 in6addr_*, etc.)
 # Applied before configure/build so the tree is consistent.
@@ -116,23 +121,24 @@ if [ ${#SSL_ARGS[@]} -eq 0 ]; then
     echo " Install with: brew install libressl"
 fi
 
-if [ ! -f Makefile ] || [ ! -f "$HOST_DIR/.configured-host" ]; then
-    rm -f Makefile make/output.mk
-    echo "[build-host-otp20] Configuring native OTP 20 (forcing aarch64 64-bit)..."
-
-    ERL_TOP="$OTP_SRC" ./configure \
+if [ ! -f "$HOST_DIR/.configured-host" ]; then
+    echo "[build-host-otp20] Configuring OTP 20 for native host..."
+    ERL_TOP="$OTP_SRC" \
+    CFLAGS="-O2 -fcommon -std=gnu89 -Wno-old-style-definition -arch arm64" \
+    LDFLAGS="-arch arm64" \
+    ./configure \
         --prefix="$HOST_INSTALL" \
-        --host=aarch64-apple-darwin \
         --build=aarch64-apple-darwin \
-        --enable-m64-build \
+        --disable-smp-support \
         --disable-m32-build \
-        --without-termcap \
-        --without-wx \
-        --without-javac \
-        --without-odbc \
-        --without-docs \
+        --disable-threads \
         --disable-hipe \
-        "${SSL_ARGS[@]}"
+        --without-termcap \
+        --without-ssl \
+        --without-wx \
+        --without-odbc \
+        --without-javac \
+        --without-docs
 
     date > "$HOST_DIR/.configured-host"
 fi

@@ -1,0 +1,16 @@
+--- a/erts/configure
++++ b/erts/configure
+@@ -6839,13 +6839,6 @@
+ 		esac
+ 		;;
+ 	*-darwin*)
+-		case $LDFLAGS in
+-			*-m32*)
+-				;;
+-			*)
+-				LDFLAGS="-m32 $LDFLAGS"
+-				;;
+-		esac
+ 		;;
+ 	*)
+ 		if test X${enable_m64_build} = Xyes; then
