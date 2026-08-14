@@ -1,0 +1,14 @@
+diff --git a/lib/crypto/c_src/crypto.c b/lib/crypto/c_src/crypto.c
+index e955905..4a90405 100644
+--- a/lib/crypto/c_src/crypto.c
++++ b/lib/crypto/c_src/crypto.c
+@@ -1160,7 +1160,9 @@ static int initialize(ErlNifEnv* env, ERL_NIF_TERM load_info)
+ 	return __LINE__;
+     }
+ 
++#if !defined(LIBRESSL_VERSION_NUMBER)
+     CRYPTO_set_mem_functions(ccb->crypto_alloc, ccb->crypto_realloc, ccb->crypto_free);
++#endif
+ 
+ #ifdef OPENSSL_THREADS
+     if (nlocks > 0) {
