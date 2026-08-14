@@ -11,13 +11,13 @@ echo "Target directory: ${THIRD_PARTY_DIR}"
 rm -rf "${THIRD_PARTY_DIR}"
 mkdir -p "${THIRD_PARTY_DIR}"
 
-echo "[1/3] Fetching au-ts/libvmm..."
+echo "[1/4] Fetching au-ts/libvmm..."
 git clone --depth 1 https://github.com/au-ts/libvmm.git "${THIRD_PARTY_DIR}/libvmm"
 
-echo "[2/3] Fetching au-ts/sddf..."
+echo "[2/4] Fetching au-ts/sddf..."
 git clone --depth 1 https://github.com/au-ts/sddf.git "${THIRD_PARTY_DIR}/sddf"
 
-echo "[3/3] Fetching seL4 Microkit SDK (2.3.0)..."
+echo "[3/4] Fetching seL4 Microkit SDK (2.3.0)..."
 OS=$(uname -s | tr '[:upper:]' '[:lower:]')
 ARCH=$(uname -m)
 if [ "$ARCH" = "arm64" ]; then ARCH="aarch64"; fi
@@ -30,6 +30,18 @@ echo "Downloading ${SDK_URL}..."
 curl -L -s -o "${THIRD_PARTY_DIR}/${SDK_TAR}" "${SDK_URL}"
 tar -xf "${THIRD_PARTY_DIR}/${SDK_TAR}" -C "${THIRD_PARTY_DIR}/"
 rm "${THIRD_PARTY_DIR}/${SDK_TAR}"
+
+echo "[4/4] Fetching LibreSSL 3.1.5 (OTP 20 compatible)..."
+LIBRESSL_VER="3.1.5"
+LIBRESSL_TAR="libressl-${LIBRESSL_VER}.tar.gz"
+LIBRESSL_URL="https://ftp.openbsd.org/pub/OpenBSD/LibreSSL/${LIBRESSL_TAR}"
+
+curl -L -o "${THIRD_PARTY_DIR}/${LIBRESSL_TAR}" "${LIBRESSL_URL}"
+tar -xzf "${THIRD_PARTY_DIR}/${LIBRESSL_TAR}" -C "${THIRD_PARTY_DIR}/"
+rm "${THIRD_PARTY_DIR}/${LIBRESSL_TAR}"
+
+# Optional: create a stable symlink
+ln -sfn "libressl-${LIBRESSL_VER}" "${THIRD_PARTY_DIR}/libressl"
 
 echo "=== Third Party Dependencies Refetched Successfully ==="
 ls -la "${THIRD_PARTY_DIR}"

@@ -37,7 +37,10 @@ main([StagingDir, AppsConfig]) ->
 
     Paths = [{path, [Path(A) || {A, _} <- AppsData]}],
 
-    CoreLoad = [error_handler,application,application_controller,application_master,code,code_server,erl_eval,erl_lint,erl_parse,error_logger,ets,file,filename,file_server,file_io_server,gen,gen_event,gen_server,heart,kernel,lists,proc_lib,supervisor],
+    CoreLoad = [error_handler,application,application_controller,
+                application_master,code,code_server,erl_eval,erl_lint,erl_parse,
+                error_logger,ets,file,filename,file_server,file_io_server,
+                gen,gen_event,gen_server,heart,kernel,lists,proc_lib,supervisor],
 
     Insts = [
         {preLoaded, PreLoaded},
@@ -49,7 +52,8 @@ main([StagingDir, AppsConfig]) ->
         {path, [Path(kernel)]},
         {primLoad, [M || M <- KernelMods, not lists:member(M, CoreLoad)]}
     ] ++ [{path, [Path(stdlib)]}, {primLoad, [M || M <- StdlibMods, not lists:member(M, CoreLoad)]}]
-      ++ lists:flatten([ [{path, [Path(App)]}, {primLoad, proplists:get_value(modules, Opts)}] || {App, Opts} <- AppsData, App =/= kernel, App =/= stdlib ])
+      ++ lists:flatten([ [{path, [Path(App)]}, {primLoad, proplists:get_value(modules, Opts)}]
+                      || {App, Opts} <- AppsData, App =/= kernel, App =/= stdlib ])
       ++ [{progress, modules_loaded}] ++ Paths ++ [
         {kernelProcess, error_logger, {error_logger, start_link, []}},
         {kernelProcess, application_controller, {application_controller, start, [{application, kernel, KernelOpts}]}},
@@ -68,6 +72,6 @@ main([StagingDir, AppsConfig]) ->
         {progress, started}
     ],
 
-    Script = {script, {"Synrc OS", "1.0"}, Insts},
+    Script = {script, {"OS.1 Hypervisor", "1.0"}, Insts},
     file:write_file(filename:join([StagingDir, "otp", "bin", "start.boot"]), term_to_binary(Script)),
     halt().

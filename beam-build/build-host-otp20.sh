@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
+
 # Build a native OTP 20 host system (erl/erlc) for compiling BEAM bytecode
 # and generating start.boot via make_boot.erl.
-#
 # Output prefix: build/otp20-host/install/
 
 export CC=/opt/homebrew/opt/llvm/bin/clang
@@ -12,7 +12,6 @@ export LDFLAGS="-arch arm64"
 
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-# shellcheck source=common.sh
 source "$SCRIPT_DIR/common.sh"
 REPO_ROOT="$(beam_build_root)"
 HOST_DIR="$REPO_ROOT/build/otp20-host"
@@ -65,18 +64,12 @@ if [ -n "$CFG_GUESS" ] && [ -n "$CFG_SUB" ]; then
 fi
 
 echo "[build-host-otp20] Disabling optional libraries..."
-for lib in mnesia ssh et crypto ssl public_key os_mon snmp otp_mibs debugger observer megaco odbc cosEvent cosEventDomain cosFileTransfer \
+for lib in mnesia ssh et os_mon snmp otp_mibs debugger observer megaco odbc cosEvent cosEventDomain cosFileTransfer \
             cosNotification cosProperty cosTime cosTransactions wx diameter; do
     if [ -d "lib/$lib" ]; then
         rm -f "lib/$lib/configure"
         # Prevent make from entering the app
         echo "skipping $lib" > "lib/$lib/SKIP"
-        cat > "lib/$lib/Makefile" <<EOF
-opt:
-    @echo "[build-host-otp20] skipping $lib"
-clean:
-    @true
-EOF
     fi
 done
 
@@ -105,6 +98,8 @@ done
 
 # Prefer LibreSSL, then OpenSSL
 for candidate in \
+    "$REPO_ROOT/third_party/libressl" \
+    "$REPO_ROOT/third_party/libressl-3.9.2" \
     "$(brew --prefix libressl 2>/dev/null || true)" \
     "$(brew --prefix openssl@1.1 2>/dev/null || true)" \
     "$(brew --prefix openssl@3 2>/dev/null || true)" \
@@ -133,8 +128,8 @@ if [ ! -f "$HOST_DIR/.configured-host" ]; then
         --disable-m32-build \
         --disable-threads \
         --disable-hipe \
+        --with-ssl=$REPO_ROOT/third_party/libressl-3.1.5/install-host \
         --without-termcap \
-        --without-ssl \
         --without-wx \
         --without-odbc \
         --without-javac \
@@ -160,5 +155,19 @@ ln -sfn aarch64-apple-darwin $TRIPLE
 ln -sfn aarch64-apple-darwin $SIMPLE_TRIPLE
 ln -sfn aarch64-apple-darwin arm-apple-darwin 2>/dev/null || true
 cd $PWD
+
+CRYPTO_CSRC="build/otp20-host/otp/lib/crypto/c_src"
+
+# Create the directory the make is looking for
+mkdir -p "$CRYPTO_CSRC/arm-apple-darwin25.5.0"
+
+# If there is already a directory for the configured triple, point to it
+if [ -d "$CRYPTO_CSRC/aarch64-apple-darwin" ]; then
+  ln -sfn ../aarch64-apple-darwin/Makefile "$CRYPTO_CSRC/arm-apple-darwin25.5.0/Makefile" 2>/dev/null || true
+  ln -sfn aarch64-apple-darwin "$CRYPTO_CSRC/arm-apple-darwin25.5.0"
+fi
+
+mkdir -p "$CRYPTO_CSRC/arm64-apple-darwin25.5.0"
+ln -sfn aarch64-apple-darwin "$CRYPTO_CSRC/arm64-apple-darwin25.5.0" 2>/dev/null || true
 
 echo "[build-host-otp20] Done: $(otp_release_of "$HOST_ERL") at $HOST_INSTALL"

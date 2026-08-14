@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
+
 # Build OTP 20 (non-SMP, no threads, static musl) for AArch64
-# Uses Homebrew filosottile/musl-cross toolchain: brew install filosottile/musl-cross/musl-cross
+# Uses Homebrew filosottile/musl-cross toolchain: brew install filosottile/musl-cross
 #
 # Produces:
 # build/beam.aarch64.elf — cross-compiled BEAM emulator
@@ -8,9 +9,9 @@
 # and start.boot from make_boot.erl
 #
 # Requires a native OTP 20 host (build/otp20-host/install) for erlc/erl.
+
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-# shellcheck source=common.sh
 source "$SCRIPT_DIR/common.sh"
 REPO_ROOT="$(beam_build_root)"
 APPS_CONFIG="$SCRIPT_DIR/apps.config"
@@ -133,7 +134,7 @@ if [ ! -f "$BUILD_DIR/.configured-cross" ]; then
         --disable-threads \
         --disable-hipe \
         --without-termcap \
-        --without-ssl \
+        --with-ssl=$REPO_ROOT/third_party/libressl-3.1.5/install-host \
         --without-wx \
         --without-odbc \
         --without-javac \
@@ -188,6 +189,10 @@ done
 echo "[build-beam-aarch64] Staging rootfs and generating start.boot..."
 rm -rf "$STAGING"
 mkdir -p "$STAGING/otp/bin"
+
+echo "===== ENV BEFORE OTP APPS ====="
+env | sort | grep -E '^(CC|CXX|LD|LDFLAGS|CFLAGS|CPPFLAGS|ERL_TOP|PATH)='
+echo "================================"
 
 for app in $APPS; do
     SRC="$HOST_OTP_SRC/lib/$app/ebin"

@@ -1,20 +1,18 @@
 # Synrc Hypervision (OS.1) Top-Level Makefile (Native Microkit SDK)
 
-MICROKIT_SDK ?= third_party/microkit-sdk-2.3.0
+REPO_ROOT    := $(CURDIR)
+MICROKIT_SDK ?= $(REPO_ROOT)/third_party/microkit-sdk-2.3.0
 BOARD        ?= qemu_virt_aarch64
 CONFIG       ?= debug
 SYSTEM       ?= synrc-beam
 TARGET       ?= aarch64-none-elf
-
 CC           = clang
 LD           = /opt/homebrew/bin/ld.lld
 MICROKIT     = $(MICROKIT_SDK)/bin/microkit
-
 BOARD_DIR    = $(MICROKIT_SDK)/board/$(BOARD)/$(CONFIG)
 INC_FLAGS    = -I$(BOARD_DIR)/include -Ipds/console -Ipds/synrc
 CFLAGS       = -target $(TARGET) -mgeneral-regs-only -ffreestanding -fno-builtin -nostdlib -Wall -Wextra -O2 $(INC_FLAGS)
-LDFLAGS      = -T $(BOARD_DIR)/lib/microkit.ld $(BOARD_DIR)/lib/libmicrokit.a
-
+MK_LDFLAGS   = -T $(BOARD_DIR)/lib/microkit.ld $(BOARD_DIR)/lib/libmicrokit.a
 BUILD_DIR    = build/$(BOARD)
 
 .PHONY: all clean run setup
@@ -24,17 +22,17 @@ all: $(BUILD_DIR)/loader.img
 $(BUILD_DIR)/hello.elf: pds/hello/hello.c
 	@mkdir -p $(BUILD_DIR)
 	$(CC) $(CFLAGS) -c pds/hello/hello.c -o $(BUILD_DIR)/hello.o
-	$(LD) $(BUILD_DIR)/hello.o $(LDFLAGS) -o $@
+	$(LD) $(BUILD_DIR)/hello.o $(MK_LDFLAGS) -o $@
 
 $(BUILD_DIR)/console.elf: pds/console/console.c
 	@mkdir -p $(BUILD_DIR)
 	$(CC) $(CFLAGS) -c pds/console/console.c -o $(BUILD_DIR)/console.o
-	$(LD) $(BUILD_DIR)/console.o $(LDFLAGS) -o $@
+	$(LD) $(BUILD_DIR)/console.o $(MK_LDFLAGS) -o $@
 
 $(BUILD_DIR)/monitor.elf: pds/monitor/monitor.c
 	@mkdir -p $(BUILD_DIR)
 	$(CC) $(CFLAGS) -c pds/monitor/monitor.c -o $(BUILD_DIR)/monitor.o
-	$(LD) $(BUILD_DIR)/monitor.o $(LDFLAGS) -o $@
+	$(LD) $(BUILD_DIR)/monitor.o $(MK_LDFLAGS) -o $@
 
 $(BUILD_DIR)/synrc.elf: pds/synrc/synrc_main.c pds/synrc/syscall_trap.c pds/synrc/vfs.c pds/synrc/beam_loader.c pds/synrc/beam_emulator.c
 	@mkdir -p $(BUILD_DIR)
@@ -43,7 +41,7 @@ $(BUILD_DIR)/synrc.elf: pds/synrc/synrc_main.c pds/synrc/syscall_trap.c pds/synr
 	$(CC) $(CFLAGS) -c pds/synrc/vfs.c -o $(BUILD_DIR)/vfs.o
 	$(CC) $(CFLAGS) -c pds/synrc/beam_loader.c -o $(BUILD_DIR)/beam_loader.o
 	$(CC) $(CFLAGS) -c pds/synrc/beam_emulator.c -o $(BUILD_DIR)/beam_emulator.o
-	$(LD) $(BUILD_DIR)/synrc_main.o $(BUILD_DIR)/syscall_trap.o $(BUILD_DIR)/vfs.o $(BUILD_DIR)/beam_loader.o $(BUILD_DIR)/beam_emulator.o $(LDFLAGS) -o $@
+	$(LD) $(BUILD_DIR)/synrc_main.o $(BUILD_DIR)/syscall_trap.o $(BUILD_DIR)/vfs.o $(BUILD_DIR)/beam_loader.o $(BUILD_DIR)/beam_emulator.o $(MK_LDFLAGS) -o $@
 
 $(BUILD_DIR)/loader.img: $(BUILD_DIR)/hello.elf $(BUILD_DIR)/console.elf $(BUILD_DIR)/monitor.elf $(BUILD_DIR)/synrc.elf systems/$(SYSTEM).system
 	$(MICROKIT) systems/$(SYSTEM).system \
