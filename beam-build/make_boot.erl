@@ -60,11 +60,11 @@ main([StagingDir, AppsConfig]) ->
         [{apply, {application, load, [{application, App, Opts}]}} || {App, Opts} <- AppsData, App =/= kernel, App =/= stdlib]
     ]) ++ [
         {progress, applications_loaded},
-        {apply, {erlang, display, [<<"HELLO FROM OS.1 BEAM SE-L4 MICROKIT BOOTLOADER! BOOT SUCCESSFUL!">>]} }
+        {apply, {erlang, display, [<<"OS.1 BEAM erlang booloader script start.boot @ seL4/Microkit">>]} }
     ] ++ lists:flatten([
-        [{apply, {application, start_boot, [App, permanent]}} || App <- [kernel, stdlib]]
+        [{apply, {application, start_boot, [App, permanent]}} || App <- [ kernel, stdlib, compiler, syntax_tools, parsetools, asn1 ] ]
     ]) ++ [
-        {apply, {c, erlangrc, []}},
+%        {apply, {c, erlangrc, []}},
         {progress, started}
     ],
 
