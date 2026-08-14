@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # Build OTP 20 (non-SMP, no threads, static musl) for AArch64
-# Uses Homebrew filosottile/musl-cross toolchain: brew install filosottile/musl-cross
+# Uses Homebrew filosottile/musl-cross toolchain: brew install filosottile/musl-cross/musl-cross
 #
 # Produces:
 # build/beam.aarch64.elf — cross-compiled BEAM emulator
