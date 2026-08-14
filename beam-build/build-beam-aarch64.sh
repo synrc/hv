@@ -200,6 +200,12 @@ for app in $APPS; do
     find "$SRC" \( -name "*.beam" -o -name "*.app" -o -name "*.appup" \) -exec cp -f {} "$DST/" \;
 done
 
+echo "[build-beam-aarch64] Stripping debug info from staged beams..."
+for beam in "$STAGING"/otp/lib/*/ebin/*.beam; do
+    [ -f "$beam" ] || continue
+    "$HOST_ERL" -noshell -eval "beam_lib:strip_files([\"$beam\"]), halt()."
+done
+
 MAKE_BOOT_BEAM="$BUILD_DIR/make_boot.beam"
 "$HOST_ERLC" -o "$BUILD_DIR" "$SCRIPT_DIR/make_boot.erl"
 
