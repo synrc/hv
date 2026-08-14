@@ -152,4 +152,13 @@ if [ ! -x "$HOST_ERL" ]; then
     exit 1
 fi
 
+PWD=`pwd`
+cd $OTP_SRC/make
+TRIPLE=`clang -print-target-triple`
+SIMPLE_TRIPLE=${TRIPLE/arm64/arm}
+ln -sfn aarch64-apple-darwin $TRIPLE
+ln -sfn aarch64-apple-darwin $SIMPLE_TRIPLE
+ln -sfn aarch64-apple-darwin arm-apple-darwin 2>/dev/null || true
+cd $PWD
+
 echo "[build-host-otp20] Done: $(otp_release_of "$HOST_ERL") at $HOST_INSTALL"

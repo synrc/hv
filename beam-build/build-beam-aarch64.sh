@@ -165,12 +165,6 @@ cp -f "$BEAM_BIN" "$OUT_ELF"
 echo "[build-beam-aarch64] BEAM emulator: $OUT_ELF"
 file "$OUT_ELF"
 
-PWD=`pwd`
-cd $BUILD_DIR/../otp20-host/otp/make
-ln -sfn aarch64-apple-darwin arm-apple-darwin24.6.0
-ln -sfn aarch64-apple-darwin arm-apple-darwin 2>/dev/null || true
-cd $PWD
-
 # -------------------------------------------------------------------------
 # 5. Build OTP apps (BEAM bytecode) with host OTP 20 erlc
 # Uses the host tree sources — same tag, correct compiler version.
