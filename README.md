@@ -105,6 +105,7 @@ Note that this project doesn't depend on Rust or Cloudozer code.
 
 * [1]. Namdak Tonpa. [Synrc Hypervision](https://hv.synrc.com/hv.pdf). 2026
 * [2]. Namdak Tonpa. [BEAMP.SMP](https://hv.synrc.com/hv-smp.pdf). 2026
+* [3]. Namdak Tonpa. [Infosed OS.1](https://hv.synrc.com/hv-infosec.pdf). 2026
 
 Credits
 -------
