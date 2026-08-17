@@ -26,15 +26,16 @@ typedef struct {
 } boot_entry_t;
 
 static boot_entry_t menu_items[MAX_ITEMS] = {
-    {"Erlang/OTP 20.0 (synrc_beam)", "net_backend=sddf smp=false node=hv@localhost", 1},
-    {"NetBSD 11.0 Rump Kernel",      "com0=0x09000000 root=viocon0 crypto=opencrypto", 2},
-    {"Guest Alpine Linux VMM",       "quiet root=/dev/vda1 console=hvc0", 2},
-    {"Binary Editor",                 "", 1},
-    {"Terminal Vision",               "", 1},
-    {"Sokhatsky Commander",           "", 1},
+    {"Erlang/OTP 20.0 (synrc_beam)",  "net_backend=sddf smp=false node=hv@localhost", 1},
+    {"NetBSD 11.0 Rump Kernel",       "com0=0x09000000 root=viocon0 crypto=opencrypto", 2},
+    {"Guest Alpine Linux VMM",        "quiet root=/dev/vda1 console=hvc0", 2},
+    {"Binary Editor",                 "bitness=64 arch=MIPS", 1},
+    {"Terminal Vision"                "mode=CUA enc=UTF8", 1},
+    {"Sokhatsky Commander"    ,       "shell=vsh", 1},
     {"Verified POSIX Shell",          "", 1},
     {"NEC PC-98 Linux 7.1 i386",      "", 1},
-    {"ELKS",                          "", 1},
+    {"Vinix OS vlsh vlib coreutils",  "", 1},
+    {"Smalltalk-80",                  "", 1},
     {"Pentium III os8088",            "", 1}
 };
 
