@@ -40,7 +40,7 @@ static boot_entry_t menu_items[MAX_ITEMS] = {
     {"NetBSD 11.0 (smolBSD MICROVM)",   "[UNIX Card]",         "USA",          "com0=0x09000000 root=viocon0 crypto=opencrypto consdev=hvc0 virtio_mmio.device=0x0a000000 smp=1 mem=128M", 2},
     {"Alpine Linux",                    "[Linux Card]",        "Switzerland",  "quiet root=/dev/vda1 console=hvc0 virtio_mmio.device=0x0a000000 earlyprintk=hvc0 smp=2 mem=256M init=/sbin/init", 2},
     {"POSIX Binary Editor",             "[POSIX Card]",        "Ukraine",      "bitness=64 arch=riscv64 rootfs=ramfs console=hvc0 editor=bed mode=vi", 1},
-    {"POSIX Terminal Vision",           "[POSIX Card]",        "Ukraine",      "mode=CUA enc=UTF-8 console=hvc0 term=vt220 color=true mouse=virtio-input", 1},
+    {"POSIX Text Editor",               "[POSIX Card]",        "Ukraine",      "mode=CUA enc=UTF-8 console=hvc0 term=vt220 color=true mouse=virtio-input", 1},
     {"POSIX Sokhatsky Commander",       "[POSIX Card]",        "Ukraine",      "shell=vsh console=hvc0 root=/ fs=sddf-block mouse=virtio-input", 1},
     {"POSIX Verified Shell",            "[POSIX Card]",        "Ukraine",      "shell=vsh verified=true console=hvc0 capdl=static no_dyn_alloc", 1},
     {"Litte Kernel (LK)",               "[Embedded Card]",     "USA",          "console=hvc0 root=viocon0 virtio_mmio.device=0x0a000000 smp=false mem=64M platform=virt", 1},
