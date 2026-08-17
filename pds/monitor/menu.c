@@ -2,7 +2,7 @@
 #include <termios.h>
 
 // Розміри меню
-#define MAX_ITEMS 9
+#define MAX_ITEMS 10
 #define CMDLINE_MAX 64
 
 // ANSI Ескейп-послідовності для TERMIOS
@@ -30,11 +30,12 @@ static boot_entry_t menu_items[MAX_ITEMS] = {
     {"NetBSD 11.0 Rump Kernel",      "com0=0x09000000 root=viocon0 crypto=opencrypto", 2},
     {"Guest Alpine Linux VMM",       "quiet root=/dev/vda1 console=hvc0", 2},
     {"Binary Editor",                 "", 1},
-    {"Terminal Vision",                 "", 1},
-    {"Sokhatsky Commander",                 "", 1},
-    {"Verified POSIX Shell",                 "", 1},
-    {"NEC PC-98",                 "", 1},
-    {"Pentium II os8088",            "", 1}
+    {"Terminal Vision",               "", 1},
+    {"Sokhatsky Commander",           "", 1},
+    {"Verified POSIX Shell",          "", 1},
+    {"NEC PC-98 Linux 7.1 i386",      "", 1},
+    {"ELKS",                          "", 1},
+    {"Pentium III os8088",            "", 1}
 };
 
 static int current_selection = 0;
