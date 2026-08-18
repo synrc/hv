@@ -2,17 +2,21 @@
 -export([main/1]).
 
 main([StagingDir, AppsConfig]) ->
+    io:format("make_boot: main args: StagingDir=~p, AppsConfig=~p~n", [StagingDir, AppsConfig]),
     {ok, [{apps, AppNames}]} = file:consult(AppsConfig),
+    io:format("make_boot: AppNames: ~p~n", [AppNames]),
 
     AppsDataRaw = lists:map(fun(App) ->
         AppDir = filename:join([StagingDir, "otp", "lib", atom_to_list(App)]),
         AppFile = filename:join([AppDir, "ebin", atom_to_list(App) ++ ".app"]),
-        case file:consult(AppFile) of
+        Res = case file:consult(AppFile) of
             {ok, [{application, App, Opts}]} -> {App, Opts};
-            _ -> false
-        end
+            Err -> io:format("make_boot: failed to consult ~p: ~p~n", [AppFile, Err]), false
+        end,
+        Res
     end, AppNames),
 
+    io:format("make_boot: AppsDataRaw: ~p~n", [AppsDataRaw]),
     AppsData = [X || X <- AppsDataRaw, X =/= false],
 
     KernelOptsRaw = proplists:get_value(kernel, AppsData),
@@ -66,7 +70,7 @@ main([StagingDir, AppsConfig]) ->
         {progress, applications_loaded},
         {apply, {erlang, display, [<<"OS.1 BEAM erlang booloader script start.boot @ seL4/Microkit">>]} }
     ] ++ lists:flatten([
-        [{apply, {application, start_boot, [App, permanent]}} || App <- [ kernel, stdlib, compiler, syntax_tools, parsetools, asn1 ] ]
+        [{apply, {application, start_boot, [App, permanent]}} || App <- [ kernel, stdlib, compiler, syntax_tools, parsetools, asn1, crypto ] ]
     ]) ++ [
 %        {apply, {c, erlangrc, []}},
         {progress, started}

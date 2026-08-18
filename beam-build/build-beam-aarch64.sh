@@ -112,21 +112,17 @@ for lib in snmp megaco odbc cosEvent cosEventDomain cosFileTransfer \
 done
 
 # -------------------------------------------------------------------------
-# 4. Cross-configure and build emulator only (--without-ssl for bare metal)
+# 4. Cross-configure and build emulator only
 # -------------------------------------------------------------------------
 if [ ! -f "$BUILD_DIR/.configured-cross" ]; then
-    if [ -f Makefile ] && { [ -d bin/aarch64-unknown-linux-musl ] || [ -d bin/aarch64-linux-musl ]; }; then
-        echo "[build-beam-aarch64] Cross OTP tree already configured."
-        date > "$BUILD_DIR/.configured-cross"
-    fi
-fi
-
-if [ ! -f "$BUILD_DIR/.configured-cross" ]; then
     echo "[build-beam-aarch64] Configuring OTP 20 for aarch64-linux-musl..."
+    CROSS_SYSROOT="$($CROSS_GCC -print-sysroot 2>/dev/null || echo "")"
+    echo "[build-beam-aarch64] Target compiler sysroot: $CROSS_SYSROOT"
     ERL_TOP="$OTP_SRC" \
     CC="$CROSS_GCC" \
     CFLAGS="-O2 -static -fcommon -std=gnu89 -Wno-old-style-definition" \
     LDFLAGS="-static" \
+    erl_xcomp_sysroot="$CROSS_SYSROOT" \
     ./configure \
         --host=aarch64-linux-musl \
         --build="$BUILD_TRIPLE" \
@@ -134,16 +130,18 @@ if [ ! -f "$BUILD_DIR/.configured-cross" ]; then
         --disable-threads \
         --disable-hipe \
         --without-termcap \
-        --with-ssl=$REPO_ROOT/third_party/libressl-3.1.5/install-host \
+        --with-ssl="$REPO_ROOT/third_party/libressl-3.1.5/install-aarch64" \
+        --enable-static-nifs \
         --without-wx \
         --without-odbc \
         --without-javac \
-        --without-docs
+        --without-docs \
+        LIBS="-L$REPO_ROOT/third_party/libressl-3.1.5/install-aarch64/lib -lcrypto"
     date > "$BUILD_DIR/.configured-cross"
 fi
 
 echo "[build-beam-aarch64] Building emulator (this takes a few minutes)..."
-ERL_TOP="$OTP_SRC" make -j"$NCPU" emulator
+ERL_TOP="$OTP_SRC" make -j"$NCPU" TARGET=aarch64-unknown-linux-musl emulator
 
 BEAM_BIN=""
 for candidate in \
@@ -180,7 +178,7 @@ fi
 
 for app in $APPS; do
     echo "[build-beam-aarch64] make -C lib/$app opt"
-    ERL_TOP="$HOST_OTP_SRC" make -j"$NCPU" -C "$HOST_OTP_SRC/lib/$app" opt
+    ERL_TOP="$HOST_OTP_SRC" make -j"$NCPU" -C "$HOST_OTP_SRC/lib/$app" TARGET=aarch64-apple-darwin opt
 done
 
 # -------------------------------------------------------------------------
