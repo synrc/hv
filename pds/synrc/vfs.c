@@ -143,6 +143,9 @@ const vfs_file_t *vfs_lookup(const char *path) {
     // Remove leading slash for matching against cpio paths
     const char *match_path = (path[0] == '/') ? path + 1 : path;
     size_t match_len = str_len(match_path);
+    if (match_path[0] == '\0') {
+        return &vfs_dir_dummy;
+    }
 
     int is_dir = 0;
     for (int i = 0; i < vfs_file_count; i++) {

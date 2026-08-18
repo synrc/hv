@@ -11,6 +11,7 @@ puts "Starting Erlang seL4 crypto & au verification test via PTY..."
 
 success = false
 au_logged = false
+list_dir_verified = false
 hash_verified = false
 
 begin
@@ -50,10 +51,20 @@ begin
             else
               puts "\n[FAILURE] audit_client:log/7 failed to log event."
             end
+            # Send list_dir verification command
+            stdin.puts('file:list_dir("/").')
+            buffer = ""
+          elsif buffer.include?("4> ")
+            if buffer.include?("otp")
+              puts "\n[SUCCESS] file:list_dir(\"/\") successfully listed root directory containing otp!"
+              list_dir_verified = true
+            else
+              puts "\n[FAILURE] file:list_dir(\"/\") failed or returned incorrect result."
+            end
             # Send hash verification command
             stdin.puts("crypto:hash(md5, <<\"test\">>).")
             buffer = ""
-          elsif buffer.include?("4> ")
+          elsif buffer.include?("5> ")
             if buffer.include?("<<9,143,107,205,70,33,211,115,202,222,78,131,38,39,180,246>>")
               puts "\n[SUCCESS] crypto:hash/2 works natively on seL4!"
               hash_verified = true
@@ -78,10 +89,10 @@ rescue PTY::ChildExited => e
   puts "QEMU process exited: #{e.status}"
 end
 
-if success && au_logged && hash_verified
-  puts "Erlang/seL4 crypto & au test PASSED!"
+if success && au_logged && list_dir_verified && hash_verified
+  puts "Erlang/seL4 crypto & au & list_dir test PASSED!"
   exit 0
 else
-  puts "Erlang/seL4 crypto & au test FAILED!"
+  puts "Erlang/seL4 crypto & au & list_dir test FAILED!"
   exit 1
 end
