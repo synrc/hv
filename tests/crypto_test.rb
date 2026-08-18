@@ -32,14 +32,18 @@ begin
             has_crypto = buffer.include?("crypto")
             has_au = buffer.include?("au")
             has_mnesia = buffer.include?("mnesia")
+            has_pubkey = buffer.include?("public_key")
+            has_ssl = buffer.include?("ssl")
+            has_ssh = buffer.include?("ssh")
+            has_inets = buffer.include?("inets")
             
-            if has_crypto && has_au && has_mnesia
-              puts "\n[SUCCESS] crypto, au, and mnesia are started automatically in boot script!"
+            if has_crypto && has_au && has_mnesia && has_pubkey && has_ssl && has_ssh && has_inets
+              puts "\n[SUCCESS] crypto, au, mnesia, public_key, ssl, ssh, and inets are started automatically in boot script!"
               success = true
               # Send audit log command
               stdin.puts('audit_client:log(application, <<"user_session_101">>, login, <<"/">>, auth, success, #{}).')
             else
-              puts "\n[FAILURE] Required applications not started. crypto: #{has_crypto}, au: #{has_au}, mnesia: #{has_mnesia}"
+              puts "\n[FAILURE] Required applications not started. crypto: #{has_crypto}, au: #{has_au}, mnesia: #{has_mnesia}, public_key: #{has_pubkey}, ssl: #{has_ssl}, ssh: #{has_ssh}, inets: #{has_inets}"
               stdin.puts("init:stop().")
               break
             end

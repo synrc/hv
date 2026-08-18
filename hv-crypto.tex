@@ -1,0 +1,405 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage{helvet}
+\usepackage{geometry}
+\usepackage{xcolor}
+\usepackage{eso-pic}
+\usepackage{fancyhdr}
+\usepackage{parskip}
+\usepackage{microtype}
+\usepackage[english, ukrainian]{babel}
+\usepackage{url}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{amsthm}
+\usepackage{longtable}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{titlesec}
+\usepackage{tikz}
+\usetikzlibrary{shapes.geometric, arrows, arrows.meta, positioning, fit, backgrounds}
+
+\definecolor{nato}{HTML}{293757}
+\definecolor{footergray}{gray}{0.65}
+
+\geometry{a4paper,left=3cm,right=3cm,top=3cm,bottom=3cm}
+\renewcommand{\familydefault}{\sfdefault}
+\setcounter{secnumdepth}{3}
+
+\DeclareFontFamily{T2A}{phv}{}
+\DeclareFontShape{T2A}{phv}{m}{n}{<->ssub * cmss/m/n}{}
+\DeclareFontShape{T2A}{phv}{bx}{n}{<->ssub * cmss/bx/n}{}
+\DeclareFontShape{T2A}{phv}{m}{it}{<->ssub * cmss/m/it}{}
+\DeclareFontShape{T2A}{phv}{bx}{it}{<->ssub * cmss/bx/it}{}
+
+\titleformat{\section}{\color{nato}\Huge\bfseries}{\thesection.}{1em}{}
+\titlespacing*{\section}{0pt}{30pt}{12pt}
+\titleformat{\subsection}{\color{nato}\LARGE\bfseries}{\thesubsection.}{1em}{}
+\titlespacing*{\subsection}{0pt}{20pt}{8pt}
+\titleformat{\subsubsection}{\color{nato}\Large\bfseries}{\thesubsubsection.}{1em}{}
+\titlespacing*{\subsubsection}{0pt}{10pt}{6pt}
+\titleformat{\paragraph}{\color{nato}\large\bfseries}{\theparagraph.}{1em}{}
+\titlespacing*{\paragraph}{0pt}{8pt}{4pt}
+
+\fancyhf{}
+\fancyhead[R]{\small\color{footergray} 19 серпня 2026}
+\fancyfoot[L]{\small\color{footergray} ERP/1. Операційна система}
+\fancyfoot[R]{\small\color{footergray}\thepage}
+\renewcommand{\headrulewidth}{0pt}
+\renewcommand{\footrulewidth}{0.4pt}
+\renewcommand{\footrule}{\color{footergray}\hrule width \textwidth height 0.4pt}
+
+\newcommand\HUGE[1]{\fontsize{40}{40}\selectfont #1}
+
+\let\originalfootnotesize\footnotesize
+\let\oldverbatim\verbatim
+\let\oldendverbatim\endverbatim
+\renewenvironment{verbatim}{\originalfootnotesize\oldverbatim}{\oldendverbatim}
+
+\title{\textbf{OS.1}: Frozen Baseline Declaration \\ Erlang/OTP~20 + LibreSSL~3.1.5}
+\author{Namdak Tonpa (maxim@synrc.com), Synrc Research}
+\date{\today}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    filecolor=magenta,
+    urlcolor=cyan,
+    pdftitle={OS.1 Frozen Baseline: OTP 20 + LibreSSL 3.1.5},
+    pdfpagemode=FullScreen,
+}
+
+\begin{document}
+
+%----------------------------------------------------------------------
+\begin{titlepage}
+  \AddToShipoutPictureBG*{\AtPageLowerLeft{\color{nato}\rule{\paperwidth}{\paperheight}}}
+  \color{white}\thispagestyle{empty}\vspace*{3cm}\centering
+  {\Huge \textbf{Zen Crypted Operating System} \par} \vspace{1.5cm}
+  {\HUGE \textbf{Технічна декларація} \par} \vspace{1.5cm}
+  {\LARGE \textbf{Заморожений базовий рівень \\ Erlang/OTP~20 з LibreSSL~3.1.5 \\ для контрольованого подальшого патчингу} \par} \vspace{1.5cm}
+  {\large На основі вимог високого рівня довіри \par}
+  {\large Для статичних Protection Domain seL4 \par}
+  {\large Формалізовано згідно з практиками ISO/IEC/IEEE 29148 \par} \vfill
+  {\large 2026 \copyright\ Криптографічні Телесистеми \par}
+\end{titlepage}
+
+\maketitle
+\tableofcontents
+
+%----------------------------------------------------------------------
+\begin{abstract}
+This document formally declares a frozen software baseline consisting of Erlang/OTP~20
+(final maintenance line) statically linked against LibreSSL~3.1.5. The freeze is instituted
+to enable rigorous, reviewable and reproducible further patching in high-assurance environments,
+particularly those employing the seL4 microkernel with static Protection Domains, single-core
+execution and a minimised cryptographic surface (including the synrc/ca pure-ASN.1 stack).
+The declaration establishes the precise component versions, the rationale for the freeze,
+the permitted scope of subsequent patches, the exact \texttt{:crypto} and \texttt{:public\_key}
+call surface, and the governance principles under which any modifications may be introduced.
+\end{abstract}
+
+%----------------------------------------------------------------------
+\section{Introduction}
+\label{sec:intro}
+
+Modern cryptographic and runtime ecosystems evolve rapidly. Continuous upstream updates,
+while beneficial for general-purpose systems, introduce unacceptable variability and review
+burden for high-assurance, formally constrained or long-lived embedded deployments.
+In such contexts a deliberately frozen and fully characterised baseline is a prerequisite
+for meaningful security evaluation, deterministic behaviour and controlled remediation.
+
+This paper declares the following frozen baseline:
+
+\begin{itemize}
+  \item \textbf{Erlang/OTP~20} (final maintenance releases, including 20.3.8.$x$);
+  \item \textbf{LibreSSL~3.1.5} (December 2020), used as the sole cryptographic provider
+        via the OTP \texttt{crypto} NIF, preferably under static linkage.
+\end{itemize}
+
+The baseline is intended for systems that prioritise auditability, minimality and isolation
+(e.g.\ seL4 static Protection Domains) over access to the newest cryptographic primitives
+or protocol features.
+
+%----------------------------------------------------------------------
+\section{Rationale for the Freeze}
+\label{sec:rationale}
+
+\begin{enumerate}
+  \item \textbf{Reviewability.}  
+        OTP~20 and LibreSSL~3.1.5 constitute a finite, historically bounded codebase.
+        Their combined surface can be subjected to exhaustive manual and automated review.
+
+  \item \textbf{Reproducibility.}  
+        Exact source trees, build configurations and linkage methods can be archived and
+        regenerated years later.
+
+  \item \textbf{Compatibility with constrained execution environments.}  
+        Single-core, non-SMP, statically linked builds of OTP~20 map cleanly onto seL4
+        Protection Domains with minimal capability sets.
+
+  \item \textbf{Controlled patching surface.}  
+        By freezing the major versions, all subsequent security or correctness fixes become
+        explicit, localised patches against a known baseline.
+
+  \item \textbf{Alignment with existing high-assurance stacks.}  
+        The baseline is compatible with pure-Erlang ASN.1 approaches (exemplified by synrc/ca)
+        that minimise reliance on high-level LibreSSL X.509 APIs while still requiring a
+        stable cryptographic substrate.
+\end{enumerate}
+
+%----------------------------------------------------------------------
+\section{Precise Baseline Definition}
+\label{sec:baseline}
+
+\begin{table}[ht]
+\centering
+\begin{tabular}{@{}llp{6.2cm}@{}}
+\toprule
+\textbf{Component} & \textbf{Version / Identifier} & \textbf{Notes} \\
+\midrule
+Erlang/OTP              & 20.3.8.$x$ (final)          & SMP disabled or strictly limited; static NIFs preferred \\
+\texttt{crypto}         & OTP~20 corresponding       & Sole interface to LibreSSL \\
+\texttt{public\_key}    & OTP~20 corresponding       & Retained for records and pkix helpers \\
+\texttt{asn1}           & OTP~20 corresponding       & Required by public\_key and synrc ASN.1 modules \\
+LibreSSL                & 3.1.5                      & Static linking; unnecessary features disabled \\
+Linkage                 & Static (preferred)         & \texttt{libcrypto.a} linked into the crypto NIF \\
+Higher-level stack      & synrc/ca (or equivalent)   & Pure-ASN.1 certificate authority layer \\
+\bottomrule
+\end{tabular}
+\caption{Frozen baseline components.}
+\label{tab:baseline}
+\end{table}
+
+Build flags for LibreSSL~3.1.5 shall exclude shared libraries, engines, deprecated protocols
+and non-essential ciphersuites where feasible. OTP shall be configured to avoid dynamic
+loading of the SSL library.
+
+%----------------------------------------------------------------------
+\section{Scope of the Freeze}
+\label{sec:scope}
+
+\paragraph{Frozen (immutable without formal amendment)}
+\begin{itemize}
+  \item Major and minor version of Erlang/OTP (20.$x$);
+  \item Exact LibreSSL release (3.1.5);
+  \item Core architectural decisions (single-core preference, static linkage, retention of \texttt{public\_key}).
+\end{itemize}
+
+\paragraph{Permitted under controlled patching}
+\begin{itemize}
+  \item Security fixes addressing known CVEs or demonstrated vulnerabilities;
+  \item Correctness patches required for deterministic behaviour on the target platform;
+  \item Minimal adaptations required for seL4 integration or static Protection Domain constraints;
+  \item Removal or disabling of unused code paths (attack-surface reduction);
+  \item Documentation and build-system improvements that do not alter runtime semantics.
+\end{itemize}
+
+Any patch must be explicitly documented with rationale and risk analysis, applied against
+the frozen baseline, and subject to independent review before integration.
+
+%----------------------------------------------------------------------
+\section{Cryptographic Call Surface}
+\label{sec:crypto-surface}
+
+The following tables enumerate the exact entry points into the cryptographic substrate
+that are exercised by the synrc/ca + \texttt{x509} stack when running on the frozen baseline.
+
+\subsection{Direct / Primary \texttt{:crypto} Calls}
+\label{sec:crypto-direct}
+
+\begin{longtable}{@{}p{4.1cm}p{4.3cm}p{3.2cm}p{3.2cm}@{}}
+\toprule
+\textbf{Function} & \textbf{Typical form} & \textbf{Used for} & \textbf{Called from} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Function} & \textbf{Typical form} & \textbf{Used for} & \textbf{Called from} \\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+
+\texttt{:crypto.generate\_key/2} &
+\texttt{generate\_key(:ecdh, Curve)} or via \texttt{public\_key} &
+EC key pair generation &
+\texttt{X509.PrivateKey.new\_ec/1} $\to$ \texttt{CA.CSR.root/2}, \texttt{server/2}, \texttt{client/2} \\
+
+\texttt{:crypto.generate\_key/3} &
+\texttt{generate\_key(:eddsa, Curve, Priv)} &
+EdDSA public derivation &
+\texttt{x509} (Ed25519/Ed448; secondary for secp* focus) \\
+
+\texttt{:crypto.sign/4} &
+\texttt{sign(Algorithm, DigestType, Msg, Key)} &
+ECDSA / RSA signatures &
+CSR \& certificate signing (via \texttt{x509}/\texttt{public\_key}) \\
+
+\texttt{:crypto.verify/5} &
+\texttt{verify(Algorithm, DigestType, Msg, Sig, Key)} &
+Signature verification &
+\texttt{X509.CSR.valid?/1}, certificate checks \\
+
+\texttt{:crypto.strong\_rand\_bytes/1} &
+\texttt{strong\_rand\_bytes(N)} &
+Serial numbers, IVs, nonces, salt &
+Certificate serials, AES IVs, key encryption \\
+
+\texttt{:crypto.compute\_key/4} &
+\texttt{compute\_key(:ecdh, OthersPub, MyPriv, Curve)} &
+ECDH shared secret &
+\texttt{CA.AES} shared-secret helpers \\
+
+\texttt{:crypto.crypto\_one\_time/4--5} &
+\texttt{crypto\_one\_time(Cipher, Key, IV, Data, Flag)} &
+AES-256-ECB/CBC/GCM/CCM &
+\texttt{CA.AES} encrypt/decrypt \\
+
+\texttt{:crypto.hash/2} &
+\texttt{hash(sha256 $\mid$ sha384 $\mid$ \ldots, Data)} &
+Digests for signatures / HKDF &
+Indirect via \texttt{public\_key}/\texttt{x509} and \texttt{CA.HKDF}/\texttt{CA.KDF} \\
+
+\texttt{:crypto.hmac/3} &
+HMAC (OTP~20 equivalent) &
+HKDF / key derivation &
+\texttt{CA.HKDF} / \texttt{CA.KDF} paths \\
+
+\texttt{:crypto.privkey\_to\_pubkey/2} &
+(engine / modern path) &
+Derive public from private &
+\texttt{X509.PublicKey.derive/1} (engine case) \\
+\end{longtable}
+
+\subsection{Calls Mediated by \texttt{:public\_key}}
+\label{sec:public-key}
+
+These constitute the most common path inside synrc/ca.
+
+\begin{longtable}{@{}p{5.2cm}p{3.8cm}p{5.5cm}@{}}
+\toprule
+\textbf{\texttt{:public\_key} function} & \textbf{Ultimately uses} & \textbf{Purpose in synrc/ca + x509} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{\texttt{:public\_key} function} & \textbf{Ultimately uses} & \textbf{Purpose in synrc/ca + x509} \\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+
+\texttt{public\_key:generate\_key/1} &
+\texttt{:crypto.generate\_key} &
+\texttt{X509.PrivateKey.new\_ec/1}, \texttt{new\_rsa/1} \\
+
+\texttt{public\_key:sign/3} or \texttt{/4} &
+\texttt{:crypto.sign} &
+Certificate \& CSR signing \\
+
+\texttt{public\_key:verify/4} or \texttt{/5} &
+\texttt{:crypto.verify} &
+CSR / signature validation \\
+
+\texttt{public\_key:pkix\_sign/2} &
+\texttt{:crypto.sign} &
+Older-style certificate signing \\
+
+\texttt{public\_key:pem\_encode/1}, \texttt{pem\_decode/1} &
+mostly pure + crypto for encrypted PEM &
+Key \& certificate PEM I/O in \texttt{CA.CSR} \\
+
+\texttt{public\_key:pkix\_encode/3}, \texttt{pkix\_decode\_cert/2} &
+ASN.1 + crypto for signatures &
+DER handling in CMP/EST replies \\
+
+\texttt{public\_key:der\_encode/2}, \texttt{der\_decode/2} &
+ASN.1 only &
+Structure manipulation (no direct crypto) \\
+\end{longtable}
+
+\subsection{Recommended Minimal Whitelist}
+\label{sec:whitelist}
+
+For the smallest practical attack surface that still supports the full EC-focused
+synrc/ca functionality on the frozen baseline, the following entry points are sufficient:
+
+\begin{verbatim}
+:crypto.generate_key/2
+:crypto.sign/4
+:crypto.verify/5
+:crypto.strong_rand_bytes/1
+:crypto.hash/2
+:crypto.compute_key/4          % only if CA.AES / ECDH retained
+:crypto.crypto_one_time/5      % only if AES support retained
+\end{verbatim}
+
+All higher-level certificate structure handling remains in pure Erlang ASN.1 modules
+and does not enlarge the cryptographic TCB.
+
+%----------------------------------------------------------------------
+\section{Patching Policy and Governance}
+\label{sec:policy}
+
+\begin{enumerate}
+  \item \textbf{No silent upgrades.} Version numbers of the baseline components remain fixed.
+        Patches are recorded as delta sets against the declared baseline.
+
+  \item \textbf{Whitelisting of cryptographic entry points.} The \texttt{:crypto} NIF surface
+        should be restricted to the minimal set listed in Section~\ref{sec:whitelist}.
+
+  \item \textbf{Traceability.} Every binary artefact must be accompanied by exact source hashes,
+        full build configuration, list of applied patches, and a mapping of high-level operations
+        to LibreSSL functions.
+
+  \item \textbf{Exception process.} Introduction of any newer cryptographic algorithm or protocol
+        feature requires a formal amendment to this declaration and a re-evaluation of the isolation
+        and review arguments.
+\end{enumerate}
+
+%----------------------------------------------------------------------
+\section{Security Considerations and Residual Risk}
+\label{sec:risk}
+
+LibreSSL~3.1.5 post-dates the Heartbleed vulnerability and removes a substantial amount of
+legacy OpenSSL complexity. Nevertheless it is a 2020-era library and therefore carries residual
+risk relative to contemporary cryptographic practice. The freeze accepts this risk in exchange
+for a stable, reviewable foundation.
+
+Mitigations inherent in the intended deployment model include:
+
+\begin{itemize}
+  \item Strong isolation via seL4 static Protection Domains;
+  \item Aggressive reduction of network and protocol attack surface;
+  \item Preference for pure-ASN.1 certificate handling (synrc/ca style);
+  \item Capability minimisation and single-core execution.
+\end{itemize}
+
+The baseline does \emph{not} claim to provide state-of-the-art cryptographic agility.
+It claims only to provide a well-defined, frozen and patchable foundation upon which
+higher-assurance arguments can be constructed.
+
+%----------------------------------------------------------------------
+\section{Conclusion}
+\label{sec:conclusion}
+
+We hereby declare Erlang/OTP~20 together with LibreSSL~3.1.5 as a frozen baseline for further
+controlled patching. This declaration prioritises reviewability, reproducibility and compatibility
+with high-assurance isolation mechanisms over continuous upstream evolution. All subsequent work
+on systems adopting this baseline shall treat the stated versions as immutable reference points,
+with any modifications introduced solely through explicit, reviewed patches.
+
+This freeze is intentional, documented and subject to formal governance. It constitutes a deliberate
+engineering decision in favour of long-term inspectability and deterministic behaviour.
+
+%----------------------------------------------------------------------
+\section*{References (indicative)}
+
+\begin{itemize}
+  \item Erlang/OTP~20 release and maintenance documentation.
+  \item LibreSSL~3.1.5 release notes and change log.
+  \item seL4 Reference Manual and Protection Domain model.
+  \item synrc/ca technical description and ASN.1 module set.
+  \item Analyses of OTP \texttt{crypto} NIF surfaces and LibreSSL linkage practices.
+\end{itemize}
+
+\end{document}
