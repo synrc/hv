@@ -43,5 +43,8 @@ rm "${THIRD_PARTY_DIR}/${LIBRESSL_TAR}"
 # Optional: create a stable symlink
 ln -sfn "libressl-${LIBRESSL_VER}" "${THIRD_PARTY_DIR}/libressl"
 
+echo "[5/5] Fetching synrc/au..."
+git clone --depth 1 https://github.com/synrc/au.git "${THIRD_PARTY_DIR}/au"
+
 echo "=== Third Party Dependencies Refetched Successfully ==="
 ls -la "${THIRD_PARTY_DIR}"

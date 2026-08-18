@@ -7,9 +7,10 @@ require 'timeout'
 $stdout.sync = true
 $stderr.sync = true
 
-puts "Starting Erlang seL4 crypto verification test via PTY..."
+puts "Starting Erlang seL4 crypto & au verification test via PTY..."
 
 success = false
+au_logged = false
 hash_verified = false
 
 begin
@@ -27,30 +28,30 @@ begin
             stdin.puts("application:which_applications().")
             buffer = ""
           elsif buffer.include?("2> ")
-            if buffer.include?("crypto")
-              puts "\n[SUCCESS] crypto is started automatically in boot script!"
+            has_crypto = buffer.include?("crypto")
+            has_au = buffer.include?("au")
+            has_mnesia = buffer.include?("mnesia")
+            
+            if has_crypto && has_au && has_mnesia
+              puts "\n[SUCCESS] crypto, au, and mnesia are started automatically in boot script!"
               success = true
-              stdin.puts("crypto:hash(md5, <<\"test\">>).")
+              # Send audit log command
+              stdin.puts('audit_client:log(application, <<"user_session_101">>, login, <<"/">>, auth, success, #{}).')
             else
-              puts "\n[WARNING] crypto was not started automatically. Attempting manual start..."
-              stdin.puts("application:start(crypto).")
+              puts "\n[FAILURE] Required applications not started. crypto: #{has_crypto}, au: #{has_au}, mnesia: #{has_mnesia}"
+              stdin.puts("init:stop().")
+              break
             end
             buffer = ""
           elsif buffer.include?("3> ")
-            if success
-              # Started automatically: prompt 3> shows the result of the hash
-              if buffer.include?("<<9,143,107,205,70,33,211,115,202,222,78,131,38,39,180,246>>")
-                puts "\n[SUCCESS] crypto:hash/2 works natively on seL4!"
-                hash_verified = true
-              else
-                puts "\n[FAILURE] crypto:hash/2 failed or returned incorrect result."
-              end
-              stdin.puts("init:stop().")
-              break
+            if buffer.include?("ok")
+              puts "\n[SUCCESS] audit_client:log/7 successfully logged event to audit_core!"
+              au_logged = true
             else
-              # Manually started: prompt 3> shows application:start output. Send hash command now.
-              stdin.puts("crypto:hash(md5, <<\"test\">>).")
+              puts "\n[FAILURE] audit_client:log/7 failed to log event."
             end
+            # Send hash verification command
+            stdin.puts("crypto:hash(md5, <<\"test\">>).")
             buffer = ""
           elsif buffer.include?("4> ")
             if buffer.include?("<<9,143,107,205,70,33,211,115,202,222,78,131,38,39,180,246>>")
@@ -77,10 +78,10 @@ rescue PTY::ChildExited => e
   puts "QEMU process exited: #{e.status}"
 end
 
-if success && hash_verified
-  puts "Erlang/seL4 crypto test PASSED!"
+if success && au_logged && hash_verified
+  puts "Erlang/seL4 crypto & au test PASSED!"
   exit 0
 else
-  puts "Erlang/seL4 crypto test FAILED!"
+  puts "Erlang/seL4 crypto & au test FAILED!"
   exit 1
 end

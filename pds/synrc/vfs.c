@@ -22,7 +22,7 @@ typedef struct {
     char c_check[8];
 } cpio_newc_header_t;
 
-#define VFS_MAX_FILES 256
+#define VFS_MAX_FILES 1024
 static vfs_file_t vfs_index[VFS_MAX_FILES];
 static int vfs_file_count = 0;
 

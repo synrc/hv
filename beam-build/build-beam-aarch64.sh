@@ -177,6 +177,9 @@ if [ ! -d "$HOST_OTP_SRC" ]; then
 fi
 
 for app in $APPS; do
+    if [ "$app" = "au" ]; then
+        continue
+    fi
     echo "[build-beam-aarch64] make -C lib/$app opt"
     ERL_TOP="$HOST_OTP_SRC" make -j"$NCPU" -C "$HOST_OTP_SRC/lib/$app" TARGET=aarch64-apple-darwin opt
 done
@@ -193,7 +196,25 @@ env | sort | grep -E '^(CC|CXX|LD|LDFLAGS|CFLAGS|CPPFLAGS|ERL_TOP|PATH)='
 echo "================================"
 
 for app in $APPS; do
-    SRC="$HOST_OTP_SRC/lib/$app/ebin"
+    if [ "$app" = "au" ]; then
+        echo "[build-beam-aarch64] Compiling third-party Erlang app au..."
+        mkdir -p "$REPO_ROOT/third_party/au/ebin"
+        "$HOST_ERLC" -I "$REPO_ROOT/third_party/au/include" -o "$REPO_ROOT/third_party/au/ebin" "$REPO_ROOT/third_party/au/src"/*.erl
+        "$HOST_ERL" -noshell -eval '
+            Src = "'"$REPO_ROOT"'/third_party/au/src/au.app.src",
+            Dst = "'"$REPO_ROOT"'/third_party/au/ebin/au.app",
+            {ok, [{application, au, Opts}]} = file:consult(Src),
+            Beams = filelib:wildcard("'"$REPO_ROOT"'/third_party/au/ebin/*.beam"),
+            Modules = [list_to_atom(filename:basename(B, ".beam")) || B <- Beams],
+            Opts1 = lists:keyreplace(modules, 1, Opts, {modules, Modules}),
+            App = {application, au, Opts1},
+            file:write_file(Dst, io_lib:format("~p.~n", [App])),
+            halt().'
+        SRC="$REPO_ROOT/third_party/au/ebin"
+    else
+        SRC="$HOST_OTP_SRC/lib/$app/ebin"
+    fi
+
     if [ ! -d "$SRC" ] || [ -z "$(ls -A "$SRC"/*.beam 2>/dev/null)" ]; then
         echo "[build-beam-aarch64] ERROR: no .beam files in $SRC for app $app"
         exit 1
@@ -201,6 +222,13 @@ for app in $APPS; do
     DST="$STAGING/otp/lib/$app/ebin"
     mkdir -p "$DST"
     find "$SRC" \( -name "*.beam" -o -name "*.app" -o -name "*.appup" \) -exec cp -f {} "$DST/" \;
+
+    if [ "$app" = "au" ]; then
+        if [ -d "$REPO_ROOT/third_party/au/priv" ]; then
+            mkdir -p "$STAGING/otp/lib/au/priv"
+            cp -rf "$REPO_ROOT/third_party/au/priv/"* "$STAGING/otp/lib/au/priv/"
+        fi
+    fi
 done
 
 echo "[build-beam-aarch64] Stripping debug info from staged beams..."

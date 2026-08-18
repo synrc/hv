@@ -70,7 +70,7 @@ main([StagingDir, AppsConfig]) ->
         {progress, applications_loaded},
         {apply, {erlang, display, [<<"OS.1 BEAM erlang booloader script start.boot @ seL4/Microkit">>]} }
     ] ++ lists:flatten([
-        [{apply, {application, start_boot, [App, permanent]}} || App <- [ kernel, stdlib, compiler, syntax_tools, parsetools, asn1, crypto ] ]
+        [{apply, {application, start_boot, [App, permanent]}} || App <- [ kernel, stdlib, compiler, syntax_tools, parsetools, asn1, crypto, au, mnesia ] ]
     ]) ++ [
 %        {apply, {c, erlangrc, []}},
         {progress, started}
