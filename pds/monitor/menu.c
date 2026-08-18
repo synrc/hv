@@ -2,8 +2,8 @@
 #include <termios.h>
 
 // Розміри меню
-#define MAX_ITEMS 17
-#define CMDLINE_MAX 256
+#define MAX_ITEMS 18
+#define CMDLINE_MAX 112
 
 // ANSI Ескейп-послідовності для TERMIOS
 #define ANSI_CLEAR "\033[2J\033[H"
@@ -29,14 +29,19 @@ typedef struct {
 
 /*
    Стандарт VirtIO (що виріс з QEMU) ліг в основу багатьох систем віртуалізації:
-   KVM/QEMU, seL4, CrosVM, Firecracker, Cloud Hypervisor, ACRN, Xvisor та ін.
-   ...
+   KVM, seL4, OSv, CrosVM, Firecracker, Cloud Hypervisor, ACRN, Xvisor, Xen та ін.
+   Цей проект пропонує захищені простори seL4 для наступних операційних систем
+   з VirtIO драйверами.
 */
 
 static boot_entry_t menu_items[MAX_ITEMS] = {
     {"NuttX 12.0",                      "[RTOS Card]",         "USA",          "console=hvc0 root=/dev/vda1 virtio_mmio.device=0x0a000000 smp=1 mem=32M nsh", 1},
     {"FreeRTOS",                        "[RTOS Card]",         "UK",           "console=hvc0 root=viocon0 virtio_mmio.device=0x0a000000 smp=false mem=64M platform=virt", 1},
-    {"Erlang/OTP 20.0 (seL4 Microkit)", "[BEAM Card]",         "Sweden",       "net_backend=sddf smp=false node=hv@localhost cookie=monitor sched=priority+edf console=hvc0", 1},
+    {"Erlang/OTP 20.0 (seL4)",          "[Unikernel Card]",    "Sweden",       "net_backend=sddf smp=false node=hv@localhost cookie=monitor sched=priority+edf console=hvc0", 1},
+    {"OCaml 5.0 Mirage VM (seL4)",      "[Unikernel Card]",    "France",       "net_backend=sddf smp=false node=hv@localhost cookie=monitor sched=priority+edf console=hvc0", 1},
+//  {"Haskell HaLVM Galois (seL4)",     "[Unikernel Card]",    "USA",          "net_backend=sddf smp=false node=hv@localhost cookie=monitor sched=priority+edf console=hvc0", 1},
+//  {"Java JamVM (OSv)",                "[Unikernel Card]",    "UK",           "net_backend=sddf smp=false node=hv@localhost cookie=monitor sched=priority+edf console=hvc0", 1},
+//  {".NET MonoVM (seL4)",              "[Unikernel Card]",    "UK",           "net_backend=sddf smp=false node=hv@localhost cookie=monitor sched=priority+edf console=hvc0", 1},
     {"NetBSD 11.0 (smolBSD MICROVM)",   "[UNIX Card]",         "USA",          "com0=0x09000000 root=viocon0 crypto=opencrypto consdev=hvc0 virtio_mmio.device=0x0a000000 smp=1 mem=128M", 2},
     {"Alpine Linux",                    "[Linux Card]",        "Switzerland",  "quiet root=/dev/vda1 console=hvc0 virtio_mmio.device=0x0a000000 earlyprintk=hvc0 smp=2 mem=256M init=/sbin/init", 2},
     {"POSIX Binary Editor",             "[POSIX Card]",        "Ukraine",      "bitness=64 arch=riscv64 rootfs=ramfs console=hvc0 editor=bed mode=vi", 1},
@@ -45,7 +50,7 @@ static boot_entry_t menu_items[MAX_ITEMS] = {
     {"POSIX Verified Shell",            "[POSIX Card]",        "Ukraine",      "shell=vsh verified=true console=hvc0 capdl=static no_dyn_alloc", 1},
     {"Litte Kernel (LK)",               "[Embedded Card]",     "USA",          "console=hvc0 root=viocon0 virtio_mmio.device=0x0a000000 smp=false mem=64M platform=virt", 1},
     {"NewOS",                           "[Embedded Card]",     "USA",          "console=hvc0 root=viocon0 virtio_mmio.device=0x0a000000 smp=false mem=64M platform=virt", 1},
-//    {"Project Oberon",                  "[Retro Card]",        "Switzerland",  "console=hvc0 display=virtio-gpu mem=32M", 1},
+//  {"Project Oberon",                  "[Retro Card]",        "Switzerland",  "console=hvc0 display=virtio-gpu mem=32M", 1},
     {"MINIX 3",                         "[Retro Card]",        "Netherlands",  "console=hvc0 root=viocon0 mem=64M", 1},
     {"Smalltalk-80",                    "[Retro Card]",        "USA",          "image=SM-80.image console=hvc0 display=virtio-gpu input=virtio-input mem=64M gc=generational", 1},
     {"TIC-80",                          "[Fantasy Cartridge]", "Poland",       "cart=auto console=hvc0 display=virtio-gpu audio=virtio-snd mem=16M", 1},
