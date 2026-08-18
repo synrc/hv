@@ -108,6 +108,41 @@ Note that this project doesn't depend on Rust or Cloudozer code.
 * [2]. Namdak Tonpa. [Byte-code Interpreters](https://hv.synrc.com/hv-bc.pdf). 2026
 * [3]. Namdak Tonpa. [Infosec OS.1](https://hv.synrc.com/hv-infosec.pdf). 2026
 
+Tests and Debugging
+-------------------
+
+This project includes a Ruby-based automated verification test suite to validate that the cross-compiled BEAM emulator runs on the seL4 guest, that the `crypto` NIF starts automatically, and that cryptographic functions (e.g., MD5 hashing) run successfully. To run the verification test:
+
+```bash
+$ ruby tests/crypto_test.rb
+```
+
+### Debugging Procedures
+
+If the compilation, bootstrapping, or tests break, follow these troubleshooting steps:
+
+1. **Verify LibreSSL installation**:
+   Ensure `third_party/libressl-3.1.5` was compiled and installed for `aarch64-linux-musl`:
+   ```bash
+   $ ls -la third_party/libressl-3.1.5/install-aarch64/lib/libcrypto.a
+   ```
+
+2. **Toolchain Sysroot**:
+   The cross-compilation configure script queries the target compiler's sysroot dynamically (`aarch64-linux-musl-gcc -print-sysroot`). If headers are not found or conflict with macOS host headers, ensure this command outputs the correct musl sysroot path.
+
+3. **Stray `make_boot.beam` Conflict**:
+   Erlang's code loader prioritizes the current directory (`.`). Ensure there is no stray `make_boot.beam` file in the root directory:
+   ```bash
+   $ rm -f make_boot.beam
+   ```
+
+4. **Interactive Eshell Inspection**:
+   Run the VM manually (`make run`), wait for the prompt, and check the applications status and cryptographic functionality:
+   ```erlang
+   1> application:which_applications().
+   2> crypto:hash(md5, <<"test">>).
+   ```
+
 Credits
 -------
 

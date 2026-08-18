@@ -100,6 +100,9 @@ build-beam-aarch64:
 clean:
 	rm -rf build/qemu_virt_aarch64/
 
+test:
+	ruby tests/crypto_test.rb
+
 # Remove everything including OTP cross-compile tree
 distclean:
 	rm -rf build/
