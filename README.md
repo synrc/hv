@@ -17,7 +17,7 @@ Try
 
 Zero you need is to build muscl-cross in Alpine/Ubuntu WSL, in macOS you can build muscl-cross using brew.
 
-### Alpine Linux
+### Alpine/Chimera Linux
 
 ```
 $ apk update
@@ -26,7 +26,7 @@ $ apk add binutils binutils-aarch64 binutils-aarch64-none-elf build-base \
       qemu-aarch64 qemu-system-aarch64 autoconf mc ruby make tar zip
 ```
 
-### Ubuntu Linux
+### Debian/Ubuntu Linux
 
 ```
 $ apt update
