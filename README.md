@@ -15,12 +15,23 @@ Requirements
 Try
 ---
 
-Zero you need is to build muscl-cross in Alpine WSL, in macOS you can build muscl-cross using brew.
+Zero you need is to build muscl-cross in Alpine/Ubuntu WSL, in macOS you can build muscl-cross using brew.
+
+### Alpine Linux
 
 ```
 $ apk update
 $ apk add binutils binutils-aarch64 binutils-aarch64-none-elf build-base gcc-aarch64-none-elf \
           perl m4 ncurses-dev openssl-dev lld clang qemu-aarch64 qemu-system-aarch64 \
+          autoconf mc ruby make tar zip
+```
+
+### Ubuntu Linux
+
+```
+$ sudo apt-get update
+$ sudo apt-get install -y build-essential binutils-aarch64-linux-gnu gcc-aarch64-linux-gnu \
+          perl m4 libncurses-dev libssl-dev lld clang qemu-user qemu-system-arm \
           autoconf mc ruby make tar zip
 ```
 
