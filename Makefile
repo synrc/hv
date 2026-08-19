@@ -78,11 +78,11 @@ run: all
 embed: all
 	@if [ ! -f $(BEAM_ELF) ]; then echo "ERROR: $(BEAM_ELF) not found. Run 'make build-beam-aarch64' first."; exit 1; fi
 	@if [ ! -f $(BEAM_CPIO) ]; then echo "ERROR: $(BEAM_CPIO) not found."; exit 1; fi
-	llvm-objcopy --add-section .beam_image=$(BEAM_ELF) \
+	aarch64-linux-musl-objcopy --add-section .beam_image=$(BEAM_ELF) \
 	             --set-section-flags .beam_image=load,alloc \
 	             --change-section-address .beam_image=0x50000000 \
 	             $(BUILD_DIR)/synrc.elf $(BUILD_DIR)/synrc.elf
-	llvm-objcopy --add-section .otp_rootfs=$(BEAM_CPIO) \
+	aarch64-linux-musl-objcopy --add-section .otp_rootfs=$(BEAM_CPIO) \
 	             --set-section-flags .otp_rootfs=load,alloc \
 	             --change-section-address .otp_rootfs=0x54000000 \
 	             $(BUILD_DIR)/synrc.elf $(BUILD_DIR)/synrc.elf
