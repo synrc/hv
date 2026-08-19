@@ -1,29 +1,29 @@
 Synrc Hypervision
 =================
 
-Synrc Hypervision is an approch and specification for running unmodified Erlang/OTP BEAM virtual machines
-within novel isolated syscall provider `Synrc` side to side with `Apline Linux` PD for drivers inside seL4 microkit.
+Synrc Hypervision is an approch and specification for running unmodified unicore Erlang/OTP BEAM virtual machines
+within novel isolated syscall provider `synrc` side to side with `Apline Linux` PD for drivers inside seL4 microkit.
 
 Requirements
 ------------
 
 * Bare-metal Type-1 lightweight hypervisor (sel4)
-* Isolation seL4 Microkit syscall layer for BEAM (synrc)
+* Isolation seL4 Microkit syscall layer for BEAM (synrc) 1K LOC unikernel for VirtIO API (QEMU/KVM/Proxmox)
 * Unmodified Ericsson BEAM (beam)
 * Smallest scalable (from DC to IoT) Linux for drivers (alpine)
 
 Try
 ---
 
-First you need to build patched LibreSSL 3.1.5.
+First you need is to build patched LibreSSL 3.1.5.
 
 
 ```
-$ sh ./scripts/fetch-third-party.sh
-$ sh ./scripts/build-ssl.sh
+$ ./scripts/fetch-third-party.sh
+$ ./scripts/build-ssl.sh
 ```
 
-Second you need is to build patched last unicore Erlang/OTP 20.0 then build Synrc BEAM Unicore release.
+Second you need is to build patched last unicore Erlang/OTP 20.0 then build HV Unicore release.
 
 ```
 $ make build-beam-aarch64
@@ -110,6 +110,9 @@ Article
 -------
 
 Note that this project doesn't depend on Rust or Cloudozer code.
+However there are some portions of Rust in seL4 bootstrapping process.
+For Erlang/OTP 18.0 for Citrix/Xen API Hypervisor look for LING `cloudozer/ling` source code.
+There is no SSL and LwIP as TCP/IP stack, same as in HV `synrc/hv`.
 
 * [1]. Namdak Tonpa. [Synrc Hypervision](https://hv.synrc.com/hv.pdf). 2026
 * [2]. Namdak Tonpa. [BEAMP.SMP](https://hv.synrc.com/hv-smp.pdf). 2026
@@ -119,7 +122,10 @@ Note that this project doesn't depend on Rust or Cloudozer code.
 Tests and Debugging
 -------------------
 
-This project includes a Ruby-based automated verification test suite to validate that the cross-compiled BEAM emulator runs on the seL4 guest, that the `crypto` NIF starts automatically, and that cryptographic functions (e.g., MD5 hashing) run successfully. To run the verification test:
+This project includes a Ruby-based automated verification test suite to validate
+that the cross-compiled BEAM emulator runs on the seL4 guest, that the `crypto`
+NIF starts automatically, and that cryptographic functions (e.g., MD5 hashing)
+run successfully. To run the verification test:
 
 ```bash
 $ ruby tests/crypto_test.rb
