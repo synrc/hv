@@ -21,18 +21,18 @@ Zero you need is to build muscl-cross in Alpine/Ubuntu WSL, in macOS you can bui
 
 ```
 $ apk update
-$ apk add binutils binutils-aarch64 binutils-aarch64-none-elf build-base gcc-aarch64-none-elf \
-          perl m4 ncurses-dev openssl-dev lld clang qemu-aarch64 qemu-system-aarch64 \
-          autoconf mc ruby make tar zip
+$ apk add binutils binutils-aarch64 binutils-aarch64-none-elf build-base \
+      gcc-aarch64-none-elf perl m4 ncurses-dev openssl-dev lld clang \
+      qemu-aarch64 qemu-system-aarch64 autoconf mc ruby make tar zip
 ```
 
 ### Ubuntu Linux
 
 ```
-$ sudo apt-get update
-$ sudo apt-get install -y build-essential binutils-aarch64-linux-gnu gcc-aarch64-linux-gnu \
-          perl m4 libncurses-dev libssl-dev lld clang qemu-user qemu-system-arm \
-          autoconf mc ruby make tar zip
+$ apt update
+$ apt install build-essential binutils-aarch64-linux-gnu gcc-aarch64-linux-gnu \
+      perl m4 libncurses-dev libssl-dev lld clang qemu-user qemu-system-arm \
+      autoconf mc ruby make tar zip
 ```
 
 First you need is to build patched LibreSSL 3.1.5.
@@ -75,7 +75,12 @@ BEAM application can operate with a dramatically reduced TCB while preserving th
 utilise complex devices, offering a practical route toward higher-assurance, certifiable distributed systems.
 
 ### Binary Ports
-Erlang's traditional `open_port` mechanism relies on POSIX `fork`/`exec` which contradicts seL4's static architecture. For the current release, we support external binaries by converting them into **Statically Linked Erlang Drivers** (C code linked directly into the BEAM). In future releases, we plan to implement true hardware-isolated ports by mapping them to independent Microkit Protection Domains (PDs) communicating via shared memory IPC.
+
+Erlang's traditional `open_port` mechanism relies on POSIX `fork`/`exec` which contradicts
+seL4's static architecture. For the current release, we support external binaries by
+converting them into **Statically Linked Erlang Drivers** (C code linked directly into the BEAM).
+In future releases, we plan to implement true hardware-isolated ports by mapping them to
+independent Microkit Protection Domains (PDs) communicating via shared memory IPC.
 
 Tree
 ----
