@@ -79,9 +79,11 @@ run: all
 	  $$BEAM_DEV $$CPIO_DEV
 
 # Option B: objcopy embed — self-contained loader-embedded.img (adds ~11 MB)
-embed: all
+embed:
 	@if [ ! -f $(BEAM_ELF) ]; then echo "ERROR: $(BEAM_ELF) not found. Run 'make build-beam-aarch64' first."; exit 1; fi
 	@if [ ! -f $(BEAM_CPIO) ]; then echo "ERROR: $(BEAM_CPIO) not found."; exit 1; fi
+	rm -f $(BUILD_DIR)/synrc.elf
+	$(MAKE) all
 	aarch64-linux-musl-objcopy --add-section .beam_image=$(BEAM_ELF) \
 	             --set-section-flags .beam_image=load,alloc \
 	             --change-section-address .beam_image=0x50000000 \
@@ -101,8 +103,56 @@ embed: all
 build-beam-aarch64:
 	bash beam-build/build-beam-aarch64.sh
 
+.PHONY: proxmox
+proxmox: embed
+	@echo "=== Producing Proxmox-compatible artifacts ==="
+	@mkdir -p $(BUILD_DIR)
+	@if [ ! -f $(BUILD_DIR)/loader-embedded.img ]; then \
+	  echo "ERROR: $(BUILD_DIR)/loader-embedded.img not found."; exit 1; \
+	fi
+	@echo "Converting loader-embedded.img to QCOW2..."
+	qemu-img convert -f raw -O qcow2 \
+	  $(BUILD_DIR)/loader-embedded.img \
+	  $(BUILD_DIR)/hv-proxmox.qcow2
+	@echo "Generating Proxmox VE VM creation script..."
+	@printf '#!/usr/bin/env bash\n\
+# Automated Proxmox VE VM deployment script for Synrc Hypervision (OS.1)\n\
+set -euo pipefail\n\
+VMID=$${1:-9000}\n\
+echo "Creating AArch64 VM $${VMID} on Proxmox..."\n\
+qm create "$${VMID}" \\\n\
+  --name hv-sel4-beam \\\n\
+  --arch aarch64 \\\n\
+  --machine virt \\\n\
+  --cpu max \\\n\
+  --cores 2 \\\n\
+  --memory 2048 \\\n\
+  --ostype l26 \\\n\
+  --onboot 0\n\
+echo "Copying loader-embedded.img to PVE templates directory..."\n\
+mkdir -p /var/lib/vz/template/qemu\n\
+cp -f ./loader-embedded.img /var/lib/vz/template/qemu/loader-embedded.img\n\
+echo "Configuring Direct Kernel Boot and Serial Console..."\n\
+qm set "$${VMID}" \\\n\
+  --serial0 socket \\\n\
+  --kernel /var/lib/vz/template/qemu/loader-embedded.img\n\
+echo "VM $${VMID} successfully created."\n\
+echo "To boot:   qm start $${VMID}"\n\
+echo "To view:   qm terminal $${VMID}"\n' > $(BUILD_DIR)/deploy-hv-proxmox.sh
+	@chmod +x $(BUILD_DIR)/deploy-hv-proxmox.sh
+	@echo ""
+	@echo "=== Build Complete ==="
+	@echo "1. Image:  $(BUILD_DIR)/hv-proxmox.qcow2"
+	@echo "2. Deploy script: $(BUILD_DIR)/deploy-hv-proxmox.sh"
+	@echo ""
+	@echo "To deploy on your Proxmox VE host:"
+	@echo "  scp $(BUILD_DIR)/loader-embedded.img $(BUILD_DIR)/deploy-hv-proxmox.sh root@YOUR_PROXMOX_IP:~/"
+	@echo "  ssh root@YOUR_PROXMOX_IP './deploy-hv-proxmox.sh [VMID]'"
+	@echo "  ssh root@YOUR_PROXMOX_IP 'qm terminal [VMID]'"
+
 clean:
 	rm -rf build/qemu_virt_aarch64/
+
 
 test:
 	ruby tests/crypto_test.rb
