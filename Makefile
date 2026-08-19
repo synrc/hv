@@ -149,6 +149,7 @@ echo "To view:   qm terminal $${VMID}"\n' > $(BUILD_DIR)/deploy-hv-proxmox.sh
 	@echo "  scp $(BUILD_DIR)/loader-embedded.img $(BUILD_DIR)/deploy-hv-proxmox.sh root@YOUR_PROXMOX_IP:~/"
 	@echo "  ssh root@YOUR_PROXMOX_IP './deploy-hv-proxmox.sh [VMID]'"
 	@echo "  ssh root@YOUR_PROXMOX_IP 'qm terminal [VMID]'"
+	qemu-img info build/qemu_virt_aarch64/hv-proxmox.qcow2
 
 clean:
 	rm -rf build/qemu_virt_aarch64/

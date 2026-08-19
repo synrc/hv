@@ -4,6 +4,11 @@ Synrc Hypervision
 Synrc Hypervision is an approch and specification for running unmodified unicore Erlang/OTP BEAM virtual machines
 within novel isolated syscall provider `synrc` side to side with `Apline Linux` PD for drivers inside seL4 microkit.
 
+* macOS M1 (15.0) / M4 (26.0) --- ARM64 VirtIO for QEMU.
+* Alpine (3.17) --- ARM64 VirtIO for host build or QEMU.
+* Ubuntu (24.04) --- ARM64 VirtIO for host build or QEMU.
+* Proxmox VE (PVE 9.0-25) --- for AMD64 VirtIO for KVM.
+
 Requirements
 ------------
 
