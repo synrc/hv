@@ -71,7 +71,6 @@
 
 \begin{document}
 
-%----------------------------------------------------------------------
 \begin{titlepage}
   \AddToShipoutPictureBG*{\AtPageLowerLeft{\color{nato}\rule{\paperwidth}{\paperheight}}}
   \color{white}\thispagestyle{empty}\vspace*{3cm}\centering
@@ -85,9 +84,7 @@
 \end{titlepage}
 
 \maketitle
-\tableofcontents
 
-%----------------------------------------------------------------------
 \begin{abstract}
 This document formally declares a frozen software baseline consisting of Erlang/OTP~20
 (final maintenance line) statically linked against LibreSSL~3.1.5. The freeze is instituted
@@ -99,7 +96,9 @@ the permitted scope of subsequent patches, the exact \texttt{:crypto} and \textt
 call surface, and the governance principles under which any modifications may be introduced.
 \end{abstract}
 
-%----------------------------------------------------------------------
+\tableofcontents
+
+\newpage
 \section{Introduction}
 \label{sec:intro}
 
@@ -121,7 +120,6 @@ The baseline is intended for systems that prioritise auditability, minimality an
 (e.g.\ seL4 static Protection Domains) over access to the newest cryptographic primitives
 or protocol features.
 
-%----------------------------------------------------------------------
 \section{Rationale for the Freeze}
 \label{sec:rationale}
 
@@ -148,7 +146,7 @@ or protocol features.
         stable cryptographic substrate.
 \end{enumerate}
 
-%----------------------------------------------------------------------
+\newpage
 \section{Precise Baseline Definition}
 \label{sec:baseline}
 
@@ -175,7 +173,6 @@ Build flags for LibreSSL~3.1.5 shall exclude shared libraries, engines, deprecat
 and non-essential ciphersuites where feasible. OTP shall be configured to avoid dynamic
 loading of the SSL library.
 
-%----------------------------------------------------------------------
 \section{Scope of the Freeze}
 \label{sec:scope}
 
@@ -198,7 +195,7 @@ loading of the SSL library.
 Any patch must be explicitly documented with rationale and risk analysis, applied against
 the frozen baseline, and subject to independent review before integration.
 
-%----------------------------------------------------------------------
+\newpage
 \section{Cryptographic Call Surface}
 \label{sec:crypto-surface}
 
@@ -206,19 +203,17 @@ The following tables enumerate the exact entry points into the cryptographic sub
 that are exercised by the synrc/ca + \texttt{x509} stack when running on the frozen baseline.
 
 \subsection{Direct / Primary \texttt{:crypto} Calls}
-\label{sec:crypto-direct}
 
-\begin{longtable}{@{}p{4.1cm}p{4.3cm}p{3.2cm}p{3.2cm}@{}}
+\begin{table}[ht!]
+\label{sec:crypto-direct}
+\centering
+\small
+\noindent\makebox[\textwidth][c]{
+\begin{tabular}{p{4.1cm}p{4.3cm}p{3.2cm}p{3.2cm}}
+
 \toprule
 \textbf{Function} & \textbf{Typical form} & \textbf{Used for} & \textbf{Called from} \\
 \midrule
-\endfirsthead
-\toprule
-\textbf{Function} & \textbf{Typical form} & \textbf{Used for} & \textbf{Called from} \\
-\midrule
-\endhead
-\bottomrule
-\endfoot
 
 \texttt{:crypto.generate\_key/2} &
 \texttt{generate\_key(:ecdh, Curve)} or via \texttt{public\_key} &
@@ -228,7 +223,7 @@ EC key pair generation &
 \texttt{:crypto.generate\_key/3} &
 \texttt{generate\_key(:eddsa, Curve, Priv)} &
 EdDSA public derivation &
-\texttt{x509} (Ed25519/Ed448; secondary for secp* focus) \\
+\texttt{x509} (Ed25519/Ed448; secondary for secp focus) \\
 
 \texttt{:crypto.sign/4} &
 \texttt{sign(Algorithm, DigestType, Msg, Key)} &
@@ -269,24 +264,24 @@ HKDF / key derivation &
 (engine / modern path) &
 Derive public from private &
 \texttt{X509.PublicKey.derive/1} (engine case) \\
-\end{longtable}
+\bottomrule
+\end{tabular}
+}
+\end{table}
 
 \subsection{Calls Mediated by \texttt{:public\_key}}
 \label{sec:public-key}
 
 These constitute the most common path inside synrc/ca.
 
-\begin{longtable}{@{}p{5.2cm}p{3.8cm}p{5.5cm}@{}}
+\begin{table}[ht!]
+\centering
+\small
+\noindent\makebox[\textwidth][c]{
+\begin{tabular}{p{4.1cm}p{4.3cm}p{7cm}}
 \toprule
 \textbf{\texttt{:public\_key} function} & \textbf{Ultimately uses} & \textbf{Purpose in synrc/ca + x509} \\
 \midrule
-\endfirsthead
-\toprule
-\textbf{\texttt{:public\_key} function} & \textbf{Ultimately uses} & \textbf{Purpose in synrc/ca + x509} \\
-\midrule
-\endhead
-\bottomrule
-\endfoot
 
 \texttt{public\_key:generate\_key/1} &
 \texttt{:crypto.generate\_key} &
@@ -315,7 +310,10 @@ DER handling in CMP/EST replies \\
 \texttt{public\_key:der\_encode/2}, \texttt{der\_decode/2} &
 ASN.1 only &
 Structure manipulation (no direct crypto) \\
-\end{longtable}
+\bottomrule
+\end{tabular}
+}
+\end{table}
 
 \subsection{Recommended Minimal Whitelist}
 \label{sec:whitelist}
