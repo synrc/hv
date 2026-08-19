@@ -31,7 +31,7 @@ The implementation must preserve the existing `hv` architecture while elevating 
 
 **Key insight for storage**:
 
-VirtIO is an ABI between guest and host, not the underlying storage optimization. For local NVMe the physical path remains CPU → PCIe root complex → NVMe controller. The host/nvme layer is a thin translation between two ring-based asynchronous interfaces (VirtIO descriptor ↔ NVMe command). This is the family of techniques proven by SPDK: userspace/poll-mode drivers, lockless queues, direct PCI BAR access, zero-copy DMA, and completion-queue polling.
+VirtIO is only an ABI between guest and host; it is not the storage path itself. For local NVMe the physical path is still the CPU talking directly to the NVMe device over PCIe (the device’s own controller sits on the PCIe bus). The host/nvme layer is therefore a thin translation between two ring-based asynchronous interfaces — VirtIO descriptors on one side and NVMe submission/completion queues on the other. This is the same family of techniques used by SPDK: poll-mode drivers, lockless queues, direct PCI BAR access, zero-copy DMA, and completion-queue polling.
 
 **Hard architectural invariant (lowest-latency path):**
 
@@ -72,7 +72,6 @@ Explicitly out of scope initially:
 * unnecessary portability layers
 * bounce buffers for storage
 * generic host block layer or filesystem
-* Alpine (or any other domain) ownership of the production NVMe controller
 
 The implementation can be extended later without making these features part of the initial ABI.
 
@@ -125,17 +124,14 @@ The NVMe backend is **not** a conventional VirtIO device driver. It is a transla
 
 ```text
 guest/virtio/blk.c
-        │
         │ VirtIO block request
-        ▼
+        v
 host/virtio
-        │
         │ direct metadata translation
-        ▼
+        v
 host/nvme
-        │
         │ NVMe SQ + doorbell
-        ▼
+        v
 PCIe NVMe controller
 ```
 
@@ -244,17 +240,17 @@ VirtIO itself cannot give the absolute lowest latency to a host NVMe array. Virt
 ```text
                     ┌───────────────┐
                     │   NVMe SSD    │
-                    └───────┬───────┘
+                    └────────┬──────┘
                             PCIe
                              │
-                    ┌────────▼────────┐
+                    ┌────────v────────┐
                     │  host CPU / RC  │
                     └────────┬────────┘
                              │
                      NVMe PCIe BAR
                      (capability-owned by hv)
                              │
-                    ┌────────▼────────┐
+                    ┌────────v────────┐
                     │ host/nvme       │
                     │ poll-mode       │
                     │ (hv PD)         │
@@ -263,7 +259,7 @@ VirtIO itself cannot give the absolute lowest latency to a host NVMe array. Virt
                     shared memory queues
                     (capability-mapped)
                              │
-                    ┌────────▼────────┐
+                    ┌────────v────────┐
                     │ guest/virtio    │
                     │ virtio-blk      │
                     │ (BEAM PD)       │
@@ -284,12 +280,11 @@ Submission Queue
 │ command 1                   │
 │ ...                         │
 └─────────────────────────────┘
-          │
           │ doorbell MMIO
-          ▼
+          v
        NVMe SSD
-          │
-          ▼
+          |
+          v
 Completion Queue
 ┌─────────────────────────────┐
 │ completion 0                │
@@ -312,20 +307,20 @@ NVMe completion    ──translate───────────────�
 ```text
 BEAM (guest PD)
   │  virtio_blk_read(LBA, len, guest_buf)
-  ▼
+  v
 VirtIO descriptor (guest PA of buffer) + block header
   │
-  ▼  (shared ring, capability-mapped)
+  v  (shared ring, capability-mapped)
 hv PD
   │  translate → NVMe command (PRP/SGL = guest PA via SMMU)
   │  store to SQ, write doorbell
-  ▼
+  v
 NVMe controller  ──DMA──►  guest buffer
   │
-  ▼  completion in CQ
+  v  completion in CQ
 hv PD polls CQ phase bit
   │  write VirtIO used ring
-  ▼
+  v
 BEAM observes completion
 ```
 
@@ -347,7 +342,6 @@ Prefer:
 
 ```text
 CPU (pinned)
- │
  ├── submit NVMe / VirtIO
  ├── poll NVMe CQ
  ├── poll VirtIO used ring
