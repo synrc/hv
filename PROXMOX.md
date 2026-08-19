@@ -1,9 +1,16 @@
-# Proxmox VE Microservices Integration Plan
+# Proxmox VE seL4 VirtIO Microservices
 
 ## Goal
 
-To deploy a suite of synrc Erlang-based microservices as lightweight, Alpine-based LXC containers or VMs within Proxmox VE. These services will provide infrastructure enhancements for Proxmox, including authentication (LDAP), Public Key Infrastructure (CA), encrypted software-defined networking (VPN), identity & authentication services (IAS), and a key-value store (KVS) that can be utilized as a Ceph metadata backend.
+To deploy a suite of synrc Erlang-based microservices as lightweight, Alpine-based LXC containers or seL4 Microkit VMs within Proxmox VE.
+These services will provide infrastructure enhancements for Proxmox, including but not limited to:
 
+* Authentication (LDAP),
+* Public Key Infrastructure (CA),
+* Encrypted software-defined networking (VPN),
+* Identity & authentication services (IAS), and a
+* Key-value store (KVS) that can be utilized as a Ceph metadata backend.
+ 
 ## Repositories Analyzed
 
 1. `../../synrc/ca`
@@ -12,7 +19,8 @@ To deploy a suite of synrc Erlang-based microservices as lightweight, Alpine-bas
 4. `../../synrc/kvs`
 5. `../../synrc/ldap`
 
-All repositories are Erlang/Elixir applications. They can be compiled into standard Erlang OTP releases and packaged into minimal Alpine Linux images.
+All repositories are Erlang/Elixir applications.
+They can be compiled into standard Erlang OTP releases and packaged into minimal Alpine Linux images.
 
 ## Architectural Overview
 
@@ -22,6 +30,7 @@ Each service will be packaged as a standalone Alpine Linux image containing:
 * A minimal supervision mechanism (e.g., `runit` or simply running the OTP release foreground script).
 
 These images can then be deployed to Proxmox VE as:
+
 * **LXC Containers:** Utilizing Proxmox's native container support for near-zero overhead.
 * **VMs:** Using `qemu-img` to create QCOW2 images with a minimal seL4 kernel and VirtIO drivers.
 
@@ -47,6 +56,7 @@ CMD ["/opt/service/bin/service", "foreground"]
 ### 2. Proxmox LXC Template Creation
 
 To provide these as native Proxmox VE services, the Docker images can be exported to rootfs tarballs, which Proxmox uses as LXC templates:
+
 ```bash
 docker export $(docker create synrc-ldap:alpine) > synrc-ldap-alpine.tar
 pct create 101 local:vztmpl/synrc-ldap-alpine.tar --arch amd64 --hostname synrc-ldap --net0 name=eth0,bridge=vmbr0,ip=dhcp
@@ -90,3 +100,7 @@ pct create 101 local:vztmpl/synrc-ldap-alpine.tar --arch amd64 --hostname synrc-
 1. Add standard `Dockerfile.alpine` to each of the 5 repositories.
 2. Develop a `Makefile` target `make proxmox-lxc` in each repository that automates the `docker build`, `docker export`, and Proxmox `pct create` steps.
 3. Test deployment on the local Proxmox VE cluster.
+
+# Credits
+
+* Namdak Tonpa
