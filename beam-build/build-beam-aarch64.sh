@@ -42,6 +42,12 @@ bash "$SCRIPT_DIR/build-host-otp20.sh"
 # -------------------------------------------------------------------------
 # 2. Cross toolchain
 # -------------------------------------------------------------------------
+if ! command -v aarch64-linux-musl-gcc &>/dev/null; then
+    if [ -d "$REPO_ROOT/aarch64-linux-musl-cross/bin" ]; then
+        export PATH="$REPO_ROOT/aarch64-linux-musl-cross/bin:$PATH"
+    fi
+fi
+
 CROSS_GCC="$(command -v aarch64-linux-musl-gcc 2>/dev/null || true)"
 if [ -z "$CROSS_GCC" ]; then
     echo "[build-beam-aarch64] ERROR: aarch64-linux-musl-gcc not found."
@@ -50,13 +56,22 @@ if [ -z "$CROSS_GCC" ]; then
 fi
 echo "[build-beam-aarch64] Using cross-compiler: $CROSS_GCC"
 
-# Detect native build triple (Apple Silicon vs Intel)
+# Detect native build triple (Apple Silicon vs Intel vs Linux)
 HOST_ARCH="$(uname -m)"
-case "$HOST_ARCH" in
-    arm64|aarch64) BUILD_TRIPLE="aarch64-apple-darwin" ;;
-    x86_64)        BUILD_TRIPLE="x86_64-apple-darwin" ;;
-    *)             BUILD_TRIPLE="$(uname -m)-apple-darwin" ;;
-esac
+HOST_OS="$(uname -s)"
+if [ "$HOST_OS" = "Darwin" ]; then
+    case "$HOST_ARCH" in
+        arm64|aarch64) BUILD_TRIPLE="aarch64-apple-darwin" ;;
+        x86_64)        BUILD_TRIPLE="x86_64-apple-darwin" ;;
+        *)             BUILD_TRIPLE="${HOST_ARCH}-apple-darwin" ;;
+    esac
+else
+    if [ -f /etc/alpine-release ]; then
+        BUILD_TRIPLE="${HOST_ARCH}-alpine-linux-musl"
+    else
+        BUILD_TRIPLE="${HOST_ARCH}-linux-musl"
+    fi
+fi
 echo "[build-beam-aarch64] Build triple: $BUILD_TRIPLE"
 
 mkdir -p "$BUILD_DIR"
@@ -141,7 +156,7 @@ if [ ! -f "$BUILD_DIR/.configured-cross" ]; then
 fi
 
 echo "[build-beam-aarch64] Building emulator (this takes a few minutes)..."
-ERL_TOP="$OTP_SRC" make -j"$NCPU" TARGET=aarch64-unknown-linux-musl emulator
+ERL_TOP="$OTP_SRC" make -j"$NCPU" TARGET=aarch64-unknown-linux-musl LDFLAGS="-static -no-pie" emulator
 
 BEAM_BIN=""
 for candidate in \
@@ -176,12 +191,21 @@ if [ ! -d "$HOST_OTP_SRC" ]; then
     exit 1
 fi
 
+HOST_TARGET=$(ls -d "$HOST_OTP_SRC/make"/*/ 2>/dev/null | head -n 1 | xargs basename 2>/dev/null || echo "")
+if [ -z "$HOST_TARGET" ]; then
+    if [ "$HOST_OS" = "Darwin" ]; then
+        HOST_TARGET="aarch64-apple-darwin"
+    else
+        HOST_TARGET="$BUILD_TRIPLE"
+    fi
+fi
+
 for app in $APPS; do
     if [ "$app" = "au" ]; then
         continue
     fi
     echo "[build-beam-aarch64] make -C lib/$app opt"
-    ERL_TOP="$HOST_OTP_SRC" make -j"$NCPU" -C "$HOST_OTP_SRC/lib/$app" TARGET=aarch64-apple-darwin opt
+    ERL_TOP="$HOST_OTP_SRC" make -j"$NCPU" -C "$HOST_OTP_SRC/lib/$app" TARGET="$HOST_TARGET" opt
 done
 
 # -------------------------------------------------------------------------

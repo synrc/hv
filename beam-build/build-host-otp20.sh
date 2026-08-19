@@ -4,11 +4,20 @@
 # and generating start.boot via make_boot.erl.
 # Output prefix: build/otp20-host/install/
 
-export CC=/opt/homebrew/opt/llvm/bin/clang
-export CXX=/opt/homebrew/opt/llvm/bin/clang++
-export CFLAGS="-std=gnu89 -Wno-old-style-definition -arch arm64 -O2 -g"
-export CXXFLAGS="-std=gnu++98 -arch arm64 -O2 -g"
-export LDFLAGS="-arch arm64"
+OS="$(uname -s)"
+if [ "$OS" = "Darwin" ]; then
+    export CC="${CC:-/opt/homebrew/opt/llvm/bin/clang}"
+    export CXX="${CXX:-/opt/homebrew/opt/llvm/bin/clang++}"
+    export CFLAGS="${CFLAGS:-"-std=gnu89 -Wno-old-style-definition -arch arm64 -O2 -g"}"
+    export CXXFLAGS="${CXXFLAGS:-"-std=gnu++98 -arch arm64 -O2 -g"}"
+    export LDFLAGS="${LDFLAGS:-"-arch arm64"}"
+else
+    export CC="${CC:-gcc}"
+    export CXX="${CXX:-g++}"
+    export CFLAGS="${CFLAGS:-"-std=gnu89 -Wno-old-style-definition -O2 -g -fcommon"}"
+    export CXXFLAGS="${CXXFLAGS:-"-std=gnu++98 -O2 -g"}"
+    export LDFLAGS="${LDFLAGS:-""}"
+fi
 
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -118,22 +127,31 @@ fi
 
 if [ ! -f "$HOST_DIR/.configured-host" ]; then
     echo "[build-host-otp20] Configuring OTP 20 for native host..."
-    ERL_TOP="$OTP_SRC" \
-    CFLAGS="-O2 -fcommon -std=gnu89 -Wno-old-style-definition -arch arm64" \
-    LDFLAGS="-arch arm64" \
-    ./configure \
+    
+    CONF_ARGS=(
         --prefix="$HOST_INSTALL" \
-        --build=aarch64-apple-darwin \
         --disable-smp-support \
         --disable-m32-build \
         --disable-threads \
         --disable-hipe \
-        --with-ssl=$REPO_ROOT/third_party/libressl-3.1.5/install-host \
+        --with-ssl="$REPO_ROOT/third_party/libressl-3.1.5/install-host" \
         --without-termcap \
         --without-wx \
         --without-odbc \
         --without-javac \
         --without-docs
+    )
+
+    if [ "$OS" = "Darwin" ]; then
+        CONF_ARGS+=(--build=aarch64-apple-darwin)
+        ERL_TOP="$OTP_SRC" \
+        CFLAGS="-O2 -fcommon -std=gnu89 -Wno-old-style-definition -arch arm64" \
+        LDFLAGS="-arch arm64" \
+        ./configure "${CONF_ARGS[@]}"
+    else
+        ERL_TOP="$OTP_SRC" \
+        ./configure "${CONF_ARGS[@]}"
+    fi
 
     date > "$HOST_DIR/.configured-host"
 fi
@@ -147,27 +165,29 @@ if [ ! -x "$HOST_ERL" ]; then
     exit 1
 fi
 
-PWD=`pwd`
-cd $OTP_SRC/make
-TRIPLE=`clang -print-target-triple`
-SIMPLE_TRIPLE=${TRIPLE/arm64/arm}
-ln -sfn aarch64-apple-darwin $TRIPLE
-ln -sfn aarch64-apple-darwin $SIMPLE_TRIPLE
-ln -sfn aarch64-apple-darwin arm-apple-darwin 2>/dev/null || true
-cd $PWD
+if [ "$OS" = "Darwin" ]; then
+    PWD=`pwd`
+    cd $OTP_SRC/make
+    TRIPLE=`clang -print-target-triple`
+    SIMPLE_TRIPLE=${TRIPLE/arm64/arm}
+    ln -sfn aarch64-apple-darwin $TRIPLE
+    ln -sfn aarch64-apple-darwin $SIMPLE_TRIPLE
+    ln -sfn aarch64-apple-darwin arm-apple-darwin 2>/dev/null || true
+    cd $PWD
 
-CRYPTO_CSRC="build/otp20-host/otp/lib/crypto/c_src"
+    CRYPTO_CSRC="build/otp20-host/otp/lib/crypto/c_src"
 
-# Create the directory the make is looking for
-mkdir -p "$CRYPTO_CSRC/arm-apple-darwin25.5.0"
+    # Create the directory the make is looking for
+    mkdir -p "$CRYPTO_CSRC/arm-apple-darwin25.5.0"
 
-# If there is already a directory for the configured triple, point to it
-if [ -d "$CRYPTO_CSRC/aarch64-apple-darwin" ]; then
-  ln -sfn ../aarch64-apple-darwin/Makefile "$CRYPTO_CSRC/arm-apple-darwin25.5.0/Makefile" 2>/dev/null || true
-  ln -sfn aarch64-apple-darwin "$CRYPTO_CSRC/arm-apple-darwin25.5.0"
+    # If there is already a directory for the configured triple, point to it
+    if [ -d "$CRYPTO_CSRC/aarch64-apple-darwin" ]; then
+      ln -sfn ../aarch64-apple-darwin/Makefile "$CRYPTO_CSRC/arm-apple-darwin25.5.0/Makefile" 2>/dev/null || true
+      ln -sfn aarch64-apple-darwin "$CRYPTO_CSRC/arm-apple-darwin25.5.0"
+    fi
+
+    mkdir -p "$CRYPTO_CSRC/arm64-apple-darwin25.5.0"
+    ln -sfn aarch64-apple-darwin "$CRYPTO_CSRC/arm64-apple-darwin25.5.0" 2>/dev/null || true
 fi
-
-mkdir -p "$CRYPTO_CSRC/arm64-apple-darwin25.5.0"
-ln -sfn aarch64-apple-darwin "$CRYPTO_CSRC/arm64-apple-darwin25.5.0" 2>/dev/null || true
 
 echo "[build-host-otp20] Done: $(otp_release_of "$HOST_ERL") at $HOST_INSTALL"

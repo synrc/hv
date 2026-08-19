@@ -7,7 +7,11 @@ CONFIG       ?= debug
 SYSTEM       ?= synrc-beam
 TARGET       ?= aarch64-none-elf
 CC           = clang
-LD           = /opt/homebrew/bin/ld.lld
+ifeq ($(shell uname -s),Darwin)
+  LD = /opt/homebrew/bin/ld.lld
+else
+  LD = ld.lld
+endif
 MICROKIT     = $(MICROKIT_SDK)/bin/microkit
 BOARD_DIR    = $(MICROKIT_SDK)/board/$(BOARD)/$(CONFIG)
 INC_FLAGS    = -I$(BOARD_DIR)/include -Ipds/console -Ipds/synrc

@@ -15,8 +15,16 @@ Requirements
 Try
 ---
 
-First you need is to build patched LibreSSL 3.1.5.
+Zero you need is to build muscl-cross in Alpine WSL, in macOS you can build muscl-cross using brew.
 
+```
+$ apk update
+$ apk add binutils binutils-aarch64 binutils-aarch64-none-elf build-base gcc-aarch64-none-elf \
+          perl m4 ncurses-dev openssl-dev lld clang qemu-aarch64 qemu-system-aarch64 \
+          autoconf mc ruby make tar zip
+```
+
+First you need is to build patched LibreSSL 3.1.5.
 
 ```
 $ ./scripts/fetch-third-party.sh

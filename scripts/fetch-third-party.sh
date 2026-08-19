@@ -21,6 +21,7 @@ echo "[3/5] Fetching seL4 Microkit SDK (2.3.0)..."
 OS=$(uname -s | tr '[:upper:]' '[:lower:]')
 ARCH=$(uname -m)
 if [ "$ARCH" = "arm64" ]; then ARCH="aarch64"; fi
+if [ "$ARCH" = "x86_64" ]; then ARCH="x86-64"; fi
 if [ "$OS" = "darwin" ]; then OS="macos"; fi
 
 SDK_TAR="microkit-sdk-2.3.0-${OS}-${ARCH}.tar.gz"
