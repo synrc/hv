@@ -15,7 +15,15 @@ Requirements
 Try
 ---
 
-First you need to build patched last unicore Erlang/OTP 20.0 then build Synrc BEAM on macOS.
+First you need to build patched LibreSSL 3.1.5.
+
+
+```
+$ sh ./scripts/fetch-third-party.sh
+$ sh ./scripts/build-ssl.sh
+```
+
+Second you need is to build patched last unicore Erlang/OTP 20.0 then build Synrc BEAM Unicore release.
 
 ```
 $ make build-beam-aarch64
