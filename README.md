@@ -143,10 +143,15 @@ However there are some portions of Rust in seL4 bootstrapping process.
 For Erlang/OTP 18.0 for Citrix/Xen API Hypervisor look for LING `cloudozer/ling` source code.
 There is no SSL and LwIP as TCP/IP stack, same as in HV `synrc/hv`.
 
-* [1]. Namdak Tonpa. [Synrc Hypervision](https://hv.synrc.com/hv.pdf). 2026
-* [2]. Namdak Tonpa. [BEAMP.SMP](https://hv.synrc.com/hv-smp.pdf). 2026
-* [2]. Namdak Tonpa. [Byte-code Interpreters](https://hv.synrc.com/hv-bc.pdf). 2026
-* [3]. Namdak Tonpa. [Infosec OS.1](https://hv.synrc.com/hv-infosec.pdf). 2026
+* [1]. Namdak Tonpa. [Synrc Hypervision OTP 20](https://hv.synrc.com/hv.pdf). 2026
+* [2]. Namdak Tonpa. [BEAMP.SMP OTP 30](https://hv.synrc.com/hv-smp.pdf). 2026
+* [3]. Namdak Tonpa. [Byte-code Interpreters](https://hv.synrc.com/hv-bc.pdf). 2026
+* [4]. Namdak Tonpa. [Infosec OS.1](https://hv.synrc.com/hv-infosec.pdf). 2026
+* [5]. Namdak Tonpa. [LibreSSL 3.1.5](https://hv.synrc.com/hv-crypto.pdf). 2026
+* [6]. Namdak Tonpa. [Kubernetes Deployments](KUBE.md). 2026
+* [7]. Namdak Tonpa. [Unikernel Deployments](PROXMOX.md). 2026
+* [8]. Namdak Tonpa. [VirtOI Architecture](VIRTIO.md). 2026
+* [9]. Namdak Tonpa. [Control Plane](CHIMERA.md). 2026
 
 Tests and Debugging
 -------------------
