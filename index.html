@@ -55,7 +55,7 @@
 
     <header>
         <div class="hero-content">
-            <h1>Synrc Virtualization Environment</h1>
+            <h1>Synrc Virtualization Environment OS.1</h1>
             <p class="hero-subtitle">High-assurance hypervisor (HV) and and operating system (OS.1) built as
             VirtIO virtualization environment (VE) and deployment platform (CI/CD) for unikernels (Erlang, C99) or VMMs (Alpine and NetBSD)
             based on seven distinct capability-managed planes: service, security, control, application, product, hypervision, and system.</p>
@@ -64,7 +64,7 @@
 
     <main>
         <section>
-            <h2>The Architecture Story</h2>
+            <h2>The Architecture</h2>
             <div class="story-container">
                 <div class="plane-header">0. The Bedrock</div>
                 <p>At the absolute foundation of the Synrc Virtualization Environment lies the <b>HYPERVISION</b> plane, a highly secure layer powered by the seL4 microkernel. Operating as the bedrock, it manages memory via strict capability derivations and runs the native <b>SYSTEM</b> planes in complete isolation. Depending on the desired UNIX semantics, administrators can deploy either the <b>ALPINE</b> or <b>NETBSD</b> flavors, establishing a deterministic and strictly MAC-sandboxed environment tailored for Unikernels and NanoVMs.</p>
