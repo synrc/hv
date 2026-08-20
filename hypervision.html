@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hypervision Plane (seL4)</title>
+    <link rel="stylesheet" href="index.css?v=6">
+    <style>
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+        @media (max-width: 900px) {
+            .grid-2 {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav class="sticky">
+        <div class="nav-container">
+            <a href="index.html" class="logo"><img width="50" style="margin-bottom:-15px;" src="https://n2o.dev/img/synrc.svg"></a>
+            <ul class="nav-links">
+                <li><a href="index.html">Intro</a></li>
+                <li><a href="products.html">Products</a></li>
+                <li><a href="applications.html">Applications</a></li>
+                <li><a href="downloads.html">Downloads</a></li>
+                <li><a href="web.html">Web</a></li>
+                <li><a href="compute.html">Compute</a></li>
+                <li><a href="security.html">Security</a></li>
+                <li><a href="control.html">Control</a></li>
+                <li><a href="service.html">Service</a></li>
+                <li><a href="system_alpine.html">Alpine</a></li>
+                <li><a href="system_netbsd.html">NetBSD</a></li>
+                <li>Hypervision</li>
+            </ul>
+        </div>
+    </nav>
+
+    <header>
+        <div class="hero-content">
+            <h1>Hypervision Plane (seL4)</h1>
+            <p class="hero-subtitle">The foundational microkernel powering the hypervisor structure and drone swarm components.</p>
+        </div>
+    </header>
+
+    <main>
+        <section>
+            <h2>Microkernel Foundations</h2>
+            <div style="max-width:800px;margin:0 auto;">
+                <p>The <b>seL4 Hypervision Plane</b> serves as the root isolation layer for all of Synrc VE. Leveraging the formally verified seL4 microkernel, OS.1 runs Alpine, NetBSD, and Erlang BEAM directly as Protection Domains (PDs). It manages memory via strict capability derivations, completely eradicating entire classes of kernel vulnerabilities.</p>
+            </div>
+
+            <div class="grid-2">
+                <div class="package-card">
+                    <h3><a href="https://hv.synrc.com">HV</a></h3>
+                    <hr>
+                    <p>The core hypervisor wrapper abstracting SEL4 boundaries to run ALPINE and NETBSD as seamless unprivileged guests.</p>
+                    <pre class="code-snippet">
+/* seL4 Capability Derivation */
+seL4_Error err = seL4_CNode_Mint(
+    dst_cnode, dst_index, dst_depth,
+    src_cnode, src_index, src_depth,
+    seL4_AllRights, seL4_CapData_Badge(1)
+);</pre>
+                </div>
+                
+                <div class="package-card">
+                    <h3><a href="https://github.com/bitedits/rt">RT</a> &amp; <a href="https://github.com/bitedits/skynet">SKYNET</a></h3>
+                    <hr>
+                    <p>NuttX POSIX RTOS integration alongside Skynet, a Drone Swarm implementation based on X.422.1 protocols.</p>
+                    <pre class="code-snippet">
+/* Drone Swarm Control Message */
+struct skynet_msg {
+    uint32_t drone_id;
+    float    target_lat;
+    float    target_lon;
+    uint8_t  action_code;
+};</pre>
+                </div>
+
+                <div class="package-card">
+                    <h3><a href="https://github.com/bitedits/be">BE</a> &amp; <a href="https://github.com/bitedits/tv">TV</a></h3>
+                    <hr>
+                    <p>Binary Editor and Terminal Vision components for low-level introspection and headless system diagnostics.</p>
+                </div>
+
+                <div class="package-card">
+                    <h3><a href="https://github.com/bitedits/sh">SH</a></h3>
+                    <hr>
+                    <p>Formal POSIX shell designed for minimal surface area and mathematically verifiable scripting behavior.</p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="footer-columns">
+            <div>
+                <h4>Synrc Virtualization Environment</h4>
+                <p>OS.1 Hypervisor written in C, Erlang/OTP by <a rel="me" href="https://mathstodon.xyz/@5ht">5HT</a>.</p>
+            </div>
+            <div>
+                <h4>Resources</h4>
+                <ul>
+                    <li><a href="https://os.synrc.com/os-hyper.pdf">SYNRC HYPERVISOR OS.1: VIRTIO XEN EXSI</a></li>
+                    <li><a href="https://os.synrc.com/os.txt">OS.1 Architecture</a></li>
+                    <li><a href="https://hv.synrc.com/hv.pdf">SYNRC HYPERVISOR: for OTP 20 Unicore seL4</a></li>
+                    <li><a href="https://hv.synrc.com/hv-smp.pdf">SYNRC HYPERVISOR: for OTP 30 4-Core seL4</a></li>
+                </ul>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>

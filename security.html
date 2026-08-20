@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Security Plane (BEAM)</title>
+    <link rel="stylesheet" href="index.css?v=6">
+    <style>
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+        @media (max-width: 900px) {
+            .grid-2 {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav class="sticky">
+        <div class="nav-container">
+            <a href="index.html" class="logo"><img width="50" style="margin-bottom:-15px;" src="https://n2o.dev/img/synrc.svg"></a>
+            <ul class="nav-links">
+                <li><a href="index.html">Intro</a></li>
+                <li><a href="products.html">Products</a></li>
+                <li><a href="applications.html">Applications</a></li>
+                <li><a href="downloads.html">Downloads</a></li>
+                <li><a href="web.html">Web</a></li>
+                <li><a href="compute.html">Compute</a></li>
+                <li>Security</li>
+                <li><a href="control.html">Control</a></li>
+                <li><a href="service.html">Service</a></li>
+                <li><a href="system_alpine.html">Alpine</a></li>
+                <li><a href="system_netbsd.html">NetBSD</a></li>
+                <li><a href="hypervision.html">Hypervision</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <header>
+        <div class="hero-content">
+            <h1>Security Plane (BEAM)</h1>
+            <p class="hero-subtitle">The isolated plane responsible for long-term cryptographic materials.</p>
+        </div>
+    </header>
+
+    <main>
+        <section>
+            <h2>Root of Trust</h2>
+            <div style="max-width:800px;margin:0 auto;">
+                <p>The <b>Security Admin BEAM</b> is the highest privilege plane in OS.1. It directly communicates with hardware TPM 2.0 modules and manages the Certificate Authority (CA) root keys. Long-term keys <b>never</b> leave this plane. All operations requiring signing or decryption are performed securely via IPC/SCM_RIGHTS channels initiated by the Control Plane.</p>
+            </div>
+
+            <div class="grid-2">
+                <div class="package-card">
+                    <h3><a href="https://github.com/synrc/tss">TSS</a></h3>
+                    <hr>
+                    <p>TPM 2.0 and hardware crypto integration via highly audited Erlang NIFs and drivers.</p>
+                    <pre class="code-snippet">
+% TSS TPM2 Sign
+sign(KeyHandle, Digest) ->
+    case tpm2:sign(KeyHandle, Digest) of
+        {ok, Signature} -> Signature;
+        {error, _}      -> exit(tpm_error)
+    end.</pre>
+                </div>
+                
+                <div class="package-card">
+                    <h3><a href="https://github.com/synrc/ca">CA</a></h3>
+                    <hr>
+                    <p>Root and intermediate Certificate Authorities. Issue, revoke, and manage X.509 lifecycles strictly within the trusted zone.</p>
+                </div>
+
+                <div class="package-card">
+                    <h3><a href="https://github.com/synrc/au">AU</a></h3>
+                    <hr>
+                    <p>High-assurance Audit plane. Append-only, cryptographically signed logs ensuring non-repudiation of all privileged actions.</p>
+                </div>
+
+                <div class="package-card">
+                    <h3><a href="https://github.com/synrc/kvs">KVS-TSS</a> &amp; <a href="https://github.com/synrc/cm">CM</a></h3>
+                    <hr>
+                    <p>Secure key store backed by TPM-sealed operations and the immutable Configuration Database tracking desired state.</p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="footer-columns">
+            <div>
+                <h4>Synrc Virtualization Environment</h4>
+                <p>OS.1 Hypervisor written in C, Erlang/OTP by <a rel="me" href="https://mathstodon.xyz/@5ht">5HT</a>.</p>
+            </div>
+            <div>
+                <h4>Resources</h4>
+                <ul>
+                    <li><a href="https://os.synrc.com/os-hyper.pdf">SYNRC HYPERVISOR OS.1: VIRTIO XEN EXSI</a></li>
+                    <li><a href="https://os.synrc.com/os.txt">OS.1 Architecture</a></li>
+                    <li><a href="https://hv.synrc.com/hv.pdf">SYNRC HYPERVISOR: for OTP 20 Unicore seL4</a></li>
+                    <li><a href="https://hv.synrc.com/hv-smp.pdf">SYNRC HYPERVISOR: for OTP 30 4-Core seL4</a></li>
+                </ul>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>

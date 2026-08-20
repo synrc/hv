@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Downloads (Завантаження)</title>
+    <link rel="stylesheet" href="index.css?v=6">
+    <style>
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+        @media (max-width: 900px) {
+            .grid-2 {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav class="sticky">
+        <div class="nav-container">
+            <a href="index.html" class="logo"><img width="50" style="margin-bottom:-15px;" src="https://n2o.dev/img/synrc.svg"></a>
+            <ul class="nav-links">
+                <li><a href="index.html">Intro</a></li>
+                <li><a href="products.html">Products</a></li>
+                <li><a href="applications.html">Applications</a></li>
+                <li>Downloads</li>
+                <li><a href="web.html">Web</a></li>
+                <li><a href="compute.html">Compute</a></li>
+                <li><a href="security.html">Security</a></li>
+                <li><a href="control.html">Control</a></li>
+                <li><a href="service.html">Service</a></li>
+                <li><a href="system_alpine.html">Alpine</a></li>
+                <li><a href="system_netbsd.html">NetBSD</a></li>
+                <li><a href="hypervision.html">Hypervision</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <header>
+        <div class="hero-content">
+            <h1>Downloads (Завантаження)</h1>
+            <p class="hero-subtitle">Documentation, architectures, policies, and formal specifications.</p>
+        </div>
+    </header>
+
+    <main>
+        <section>
+            <h2>Whitepapers and Architecture</h2>
+            <div style="max-width:800px;margin:0 auto;">
+                <p>Thorough documentation defines the correctness of Synrc VE. The stack is strictly compliant with NIST SP 800-53 and ISO standards. The documents below outline the theory, architecture, and deployment procedures for the platform.</p>
+            </div>
+
+            <div class="grid-2">
+                <div class="product-card">
+                    <h3>Core Architectures</h3>
+                    <hr>
+                    <ul>
+                        <li><a href="https://hv.synrc.com/hv.pdf">Архітектура віртуалізації</a> — The HV model</li>
+                        <li><a href="https://os.synrc.com/beam-os.pdf">Операційна система</a> — OS.1 foundation</li>
+                        <li><a href="https://x509.chat/encryption.pdf">Архітектура шифрування</a> — Cryptography</li>
+                        <li><a href="https://5ht.co/dist.pdf">Розподілена архітектура</a> — Distributed topologies</li>
+                    </ul>
+                </div>
+                
+                <div class="product-card">
+                    <h3>Security and Compliance</h3>
+                    <hr>
+                    <ul>
+                        <li><a href="https://ca.n2o.dev/priv/security-policy.pdf">Політики і модель безпеки</a> — InfoSec Policy</li>
+                        <li><a href="https://ca.n2o.dev/priv/nist.pdf">Профілі безпеки NIST 53</a> — NIST SP 800-53 Map</li>
+                        <li><a href="https://os.synrc.com/os.txt">Архітектура безпеки ERP.1</a> — OS.1 Security</li>
+                    </ul>
+                </div>
+
+                <div class="product-card">
+                    <h3>Infrastructure and Deployment</h3>
+                    <hr>
+                    <ul>
+                        <li><a href="https://cd.erp.uno/deployment.pdf">Архітектура ЦОД</a> — Data Center Architecture</li>
+                        <li><a href="https://cd.erp.uno/sre.pdf">Настанови адміністратора ЦОД</a> — SRE Handbook</li>
+                    </ul>
+                </div>
+
+                <div class="product-card">
+                    <h3>Manuals and Frameworks</h3>
+                    <hr>
+                    <ul>
+                        <li><a href="https://x509.chat/bdfl.pdf">Кафедральний собор</a> — The Cathedral</li>
+                        <li><a href="https://erp.uno/book/erp.pdf">Навчальний посібник</a> — Training Manual</li>
+                        <li><a href="https://erp.uno/man/ua/1.htm">Керівництво виконавця ERP.1</a> — Operations Manual</li>
+                        <li><a href="https://n2o.dev">Фреймворк підприємства</a> — Enterprise Framework</li>
+                        <li><a href="https://protocol.zencrypted.uk">Регламент взаємодії</a> — Interaction Protocols</li>
+                        <li><a href="https://rtp.zencrypted.uk/priv/rtp.pdf">Конференцзв'язок</a> — Video Conferencing</li>
+                        <li><a href="https://erp.uno/bpmn/bpmn-keynote.pdf">Процеси і Сховище</a> — Process and Storage Keynote</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="footer-columns">
+            <div>
+                <h4>Synrc Virtualization Environment</h4>
+                <p>OS.1 Hypervisor written in C, Erlang/OTP by <a rel="me" href="https://mathstodon.xyz/@5ht">5HT</a>.</p>
+            </div>
+            <div>
+                <h4>Resources</h4>
+                <ul>
+                    <li><a href="https://os.synrc.com/os-hyper.pdf">SYNRC HYPERVISOR OS.1: VIRTIO XEN EXSI</a></li>
+                    <li><a href="https://os.synrc.com/os.txt">OS.1 Architecture</a></li>
+                    <li><a href="https://hv.synrc.com/hv.pdf">SYNRC HYPERVISOR: for OTP 20 Unicore seL4</a></li>
+                    <li><a href="https://hv.synrc.com/hv-smp.pdf">SYNRC HYPERVISOR: for OTP 30 4-Core seL4</a></li>
+                </ul>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>

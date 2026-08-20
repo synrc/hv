@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Plane (Alpine)</title>
+    <link rel="stylesheet" href="index.css?v=6">
+    <style>
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+        @media (max-width: 900px) {
+            .grid-2 {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav class="sticky">
+        <div class="nav-container">
+            <a href="index.html" class="logo"><img width="50" style="margin-bottom:-15px;" src="https://n2o.dev/img/synrc.svg"></a>
+            <ul class="nav-links">
+                <li><a href="index.html">Intro</a></li>
+                <li><a href="products.html">Products</a></li>
+                <li><a href="applications.html">Applications</a></li>
+                <li><a href="downloads.html">Downloads</a></li>
+                <li><a href="web.html">Web</a></li>
+                <li><a href="compute.html">Compute</a></li>
+                <li><a href="security.html">Security</a></li>
+                <li><a href="control.html">Control</a></li>
+                <li><a href="service.html">Service</a></li>
+                <li>Alpine</li>
+                <li><a href="system_netbsd.html">NetBSD</a></li>
+                <li><a href="hypervision.html">Hypervision</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <header>
+        <div class="hero-content">
+            <h1>System Plane (Alpine)</h1>
+            <p class="hero-subtitle">The native userland environment utilizing Alpine Linux for guest runtimes.</p>
+        </div>
+    </header>
+
+    <main>
+        <section>
+            <h2>Alpine Guest Environment</h2>
+            <div style="max-width:800px;margin:0 auto;">
+                <p>The <b>Alpine System Plane</b> acts as a robust, highly verified root filesystem for OS.1 instances that require Linux compatibility. We utilize musl libc, openrc, and Landlock sandboxing to maintain an ultra-small attack surface suitable for embedded operations and Unikernels.</p>
+            </div>
+
+            <div class="grid-2">
+                <div class="package-card">
+                    <h3><a href="https://github.com/bitedits/alpine">ALPINE</a> &amp; <a href="https://musl.libc.org">MUSL</a></h3>
+                    <hr>
+                    <p>The OS.1 custom rootfs built on the standard C library for static compilation and deterministic linkage.</p>
+                    <pre class="code-snippet">
+# OS.1 Alpine Profile
+kernel_opts="quiet rootfstype=squashfs ro"
+apk_pkgs="musl busybox openrc eudev"</pre>
+                </div>
+                
+                <div class="package-card">
+                    <h3><a href="https://github.com/bitedits/toybox">TOYBOX</a> &amp; <a href="https://github.com/bitedits/chimerautils">CHIMERAUTILS</a></h3>
+                    <hr>
+                    <p>Replacing traditional GNU coreutils with Alpine Toybox and Chimera BSD userland tools to radically shrink the base footprint.</p>
+                </div>
+
+                <div class="package-card">
+                    <h3><a href="https://github.com/bitedits/openrc">OPENRC</a> &amp; <a href="https://github.com/bitedits/OpenDoas">OPENDOAS</a></h3>
+                    <hr>
+                    <p>Deterministic system initialization paired with `doas` for strict privilege escalation instead of the heavier `sudo`.</p>
+                    <pre class="code-snippet">
+# doas.conf
+permit nopass keepenv root as root
+permit nopass sys as root cmd /sbin/reboot</pre>
+                </div>
+
+                <div class="product-card">
+                    <h3>Security &amp; Boot</h3>
+                    <hr>
+                    <ul>
+                        <li><a href="https://github.com/bitedits/land">LAND</a> — Landlock MAC sandboxing</li>
+                        <li><a href="https://github.com/bitedits/audit-userpace">AUDIT</a> — audit userspace</li>
+                        <li><a href="https://github.com/bitedits/edk2">UEFI</a> — TianoCore EDK II</li>
+                        <li><a href="https://github.com/bpftrace/bpftrace">BPFTRACE</a> — eBPF tracing</li>
+                    </ul>
+                </div>
+
+                <div class="product-card">
+                    <h3>Networking &amp; Misc</h3>
+                    <hr>
+                    <ul>
+                        <li><a href="https://github.com/bitedits/net">NET</a> — nftables firewall</li>
+                        <li><a href="https://github.com/alpinelinux/apk-tools">APK</a> — Alpine Package Keeper</li>
+                        <li><a href="https://chrony-project.org">CHRONY</a> — NTP client</li>
+                        <li><a href="https://github.com/bitedits/seat">SEAT</a> — seatd device mediation</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="footer-columns">
+            <div>
+                <h4>Synrc Virtualization Environment</h4>
+                <p>OS.1 Hypervisor written in C, Erlang/OTP by <a rel="me" href="https://mathstodon.xyz/@5ht">5HT</a>.</p>
+            </div>
+            <div>
+                <h4>Resources</h4>
+                <ul>
+                    <li><a href="https://os.synrc.com/os-hyper.pdf">SYNRC HYPERVISOR OS.1: VIRTIO XEN EXSI</a></li>
+                    <li><a href="https://os.synrc.com/os.txt">OS.1 Architecture</a></li>
+                    <li><a href="https://hv.synrc.com/hv.pdf">SYNRC HYPERVISOR: for OTP 20 Unicore seL4</a></li>
+                    <li><a href="https://hv.synrc.com/hv-smp.pdf">SYNRC HYPERVISOR: for OTP 30 4-Core seL4</a></li>
+                </ul>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>

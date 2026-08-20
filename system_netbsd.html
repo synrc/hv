@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Plane (NetBSD)</title>
+    <link rel="stylesheet" href="index.css?v=6">
+    <style>
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+        @media (max-width: 900px) {
+            .grid-2 {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav class="sticky">
+        <div class="nav-container">
+            <a href="index.html" class="logo"><img width="50" style="margin-bottom:-15px;" src="https://n2o.dev/img/synrc.svg"></a>
+            <ul class="nav-links">
+                <li><a href="index.html">Intro</a></li>
+                <li><a href="products.html">Products</a></li>
+                <li><a href="applications.html">Applications</a></li>
+                <li><a href="downloads.html">Downloads</a></li>
+                <li><a href="web.html">Web</a></li>
+                <li><a href="compute.html">Compute</a></li>
+                <li><a href="security.html">Security</a></li>
+                <li><a href="control.html">Control</a></li>
+                <li><a href="service.html">Service</a></li>
+                <li><a href="system_alpine.html">Alpine</a></li>
+                <li>NetBSD</li>
+                <li><a href="hypervision.html">Hypervision</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <header>
+        <div class="hero-content">
+            <h1>System Plane (NetBSD)</h1>
+            <p class="hero-subtitle">The native environment utilizing NetBSD for robust networking and classic BSD semantics.</p>
+        </div>
+    </header>
+
+    <main>
+        <section>
+            <h2>NetBSD Guest Environment</h2>
+            <div style="max-width:800px;margin:0 auto;">
+                <p>For systems prioritizing legendary portability and clean architectural design, OS.1 offers a <b>NetBSD System Plane</b>. By utilizing NetBSD's `veriexec` for strict MAC sandboxing and `kauth` for granular authority, the system plane ensures impenetrable defenses even for untrusted legacy binaries.</p>
+            </div>
+
+            <div class="grid-2">
+                <div class="package-card">
+                    <h3>NETBSD-BASE &amp; BSD-LIBC</h3>
+                    <hr>
+                    <p>The standard Network Berkley Software Distribution base system paired with the highly audited BSD C library.</p>
+                </div>
+                
+                <div class="package-card">
+                    <h3>RC.D Initialization</h3>
+                    <hr>
+                    <p>Classic `rc.conf` and `rc.d` startup semantics providing declarative network and daemon configurations.</p>
+                    <pre class="code-snippet">
+# /etc/rc.conf
+rc_configured=YES
+dhcpcd=YES
+sshd=NO
+npf=YES</pre>
+                </div>
+
+                <div class="package-card">
+                    <h3>KAUTH &amp; VERIEXEC</h3>
+                    <hr>
+                    <p>Kernel Authorization framework combined with verified execution capabilities to enforce strict Mandatory Access Control on the filesystem level.</p>
+                    <pre class="code-snippet">
+# /etc/signatures
+/bin/sh sha256 0a1b2c3d...
+/sbin/init sha256 4f5e6d7c...</pre>
+                </div>
+
+                <div class="product-card">
+                    <h3>Utilities &amp; Networking</h3>
+                    <hr>
+                    <ul>
+                        <li><a href="#">NPF</a> — network packet filter</li>
+                        <li><a href="#">OPENDOAS</a> — privilege management</li>
+                        <li><a href="#">CHRONY</a> — secure NTP via pkgsrc</li>
+                        <li><a href="#">PGKIN</a> — binary package manager</li>
+                        <li><a href="#">NETBSD.UEFI</a> — NetBSD UEFI bootloader</li>
+                        <li><a href="#">BSD-UTILS</a> — Standard BSD userland tools</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="footer-columns">
+            <div>
+                <h4>Synrc Virtualization Environment</h4>
+                <p>OS.1 Hypervisor written in C, Erlang/OTP by <a rel="me" href="https://mathstodon.xyz/@5ht">5HT</a>.</p>
+            </div>
+            <div>
+                <h4>Resources</h4>
+                <ul>
+                    <li><a href="https://os.synrc.com/os-hyper.pdf">SYNRC HYPERVISOR OS.1: VIRTIO XEN EXSI</a></li>
+                    <li><a href="https://os.synrc.com/os.txt">OS.1 Architecture</a></li>
+                    <li><a href="https://hv.synrc.com/hv.pdf">SYNRC HYPERVISOR: for OTP 20 Unicore seL4</a></li>
+                    <li><a href="https://hv.synrc.com/hv-smp.pdf">SYNRC HYPERVISOR: for OTP 30 4-Core seL4</a></li>
+                </ul>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>

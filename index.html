@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Synrc Virtualization Environment</title>
+    <link rel="stylesheet" href="index.css?v=6">
+    <style>
+        .story-container {
+            max-width: 860px;
+            margin: 0 auto;
+            line-height: 1.8;
+            font-size: 1.1rem;
+            color: var(--text-primary);
+        }
+        .story-container p {
+            margin-bottom: 1.5rem;
+            text-align: justify;
+        }
+        .story-container b {
+            color: var(--accent);
+            font-weight: 700;
+        }
+        .plane-header {
+            font-family: ui-monospace, monospace;
+            font-size: 1.2rem;
+            color: var(--accent-dark);
+            margin-top: 2rem;
+            margin-bottom: 0.5rem;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 0.3rem;
+        }
+    </style>
+</head>
+<body>
+    <nav class="sticky">
+        <div class="nav-container">
+            <a href="index.html" class="logo"><img width="50" style="margin-bottom:-15px;" src="https://n2o.dev/img/synrc.svg"></a>
+            <ul class="nav-links">
+                <li>Intro</li>
+                <li><a href="products.html">Products</a></li>
+                <li><a href="applications.html">Applications</a></li>
+                <li><a href="downloads.html">Downloads</a></li>
+                <li><a href="web.html">Web</a></li>
+                <li><a href="compute.html">Compute</a></li>
+                <li><a href="security.html">Security</a></li>
+                <li><a href="control.html">Control</a></li>
+                <li><a href="service.html">Service</a></li>
+                <li><a href="system_alpine.html">Alpine</a></li>
+                <li><a href="system_netbsd.html">NetBSD</a></li>
+                <li><a href="hypervision.html">Hypervision</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <header>
+        <div class="hero-content">
+            <h1>Synrc Virtualization Environment</h1>
+            <p class="hero-subtitle">High-assurance hypervisor and unikernel deployment platform built on three mutually distrusting planes.</p>
+        </div>
+    </header>
+
+    <main>
+        <section>
+            <h2>The Architecture Story</h2>
+            <div class="story-container">
+                <div class="plane-header">0. The Bedrock</div>
+                <p>At the absolute foundation of the Synrc Virtualization Environment lies the <b>HYPERVISION</b> plane, a highly secure layer powered by the seL4 microkernel. Operating as the bedrock, it manages memory via strict capability derivations and runs the native <b>SYSTEM</b> planes in complete isolation. Depending on the desired UNIX semantics, administrators can deploy either the <b>ALPINE</b> or <b>NETBSD</b> flavors, establishing a deterministic and strictly MAC-sandboxed environment tailored for Unikernels and NanoVMs.</p>
+                
+                <div class="plane-header">1. The Capability Broker</div>
+                <p>Upon this solid foundation, the capability-driven <b>CONTROL</b> plane takes charge. Here, the CHIMERA broker allocates all system resources. It acts as the sole authority managing namespace isolation via <b>LAND</b>, firewall networks through <b>NET</b> and <b>VPN</b>, and overarching cluster orchestration with <b>CD</b> and <b>OS</b>. Within this plane, secure DNSSEC namespaces are governed by <b>NS</b>, while identity and directory structures are maintained by <b>LDAP</b> and <b>IAS</b>, all rigorously regulated by the certified Attribute-Based Access Control logic of <b>ABAC</b>.</p>
+
+                <div class="plane-header">2. The Root of Trust</div>
+                <p>Yet, despite its vast authority, the Control plane holds no secrets. All long-term cryptographic materials are strictly confined to the <b>SECURITY</b> plane. This highest-assurance BEAM enclave utilizes hardware TPM 2.0 via <b>TSS</b> to securely store and process keys using <b>KVS-TSS</b>. It operates as the root Certificate Authority (<b>CA</b>) and guarantees that every single privileged action across the entire stack is indelibly recorded by the append-only <b>AU</b> (Audit) log. Desired system states are immutably tracked by the <b>CM</b> (Configuration Management) database.</p>
+
+                <div class="plane-header">3. The Unprivileged Execution</div>
+                <p>With the infrastructure firmly secured, the <b>SERVICE</b> plane provides the unprivileged application boundaries. Userland processes—such as rootless window managers running <b>X11</b> and <b>WM</b>, or real-time communication bridges handling <b>CHAT</b>, <b>MQTT</b>, <b>TURN</b>, and <b>GST</b>—operate here entirely without ambient authority. They dynamically lease rights via capability tokens, minimizing the blast radius in the event of any compromise.</p>
+
+                <div class="plane-header">4. The Business Engine</div>
+                <p>Driving the core logic of the enterprise is the <b>APPLICATIONS</b> plane, where the scalable Business Process Engine (<b>BPE</b>) seamlessly converts complex BPMN diagrams directly into Erlang runtime execution. Persistent states and vast data structures are robustly handled by polymorphic cursor databases within <b>KVS</b>, and high-performance WebSockets are terminated by <b>N2O</b>.</p>
+
+                <div class="plane-header">5. The Consumer Interface</div>
+                <p>Finally, sitting at the very top of the stack is the <b>PRODUCTS</b> plane (ІКС). This is a comprehensive suite of domain-specific enterprise applications—ranging from Healthcare platforms parsing HL7 to Education, Accounting, and complex Analytics (OLAP). These products deliver pristine, deeply specialized user experiences without ever needing to intrinsically trust the hypervisor layers beneath them.</p>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="footer-columns">
+            <div>
+                <h4>Synrc Virtualization Environment</h4>
+                <p>OS.1 Hypervisor written in C, Erlang/OTP by <a rel="me" href="https://mathstodon.xyz/@5ht">5HT</a>.</p>
+            </div>
+            <div>
+                <h4>Resources</h4>
+                <ul>
+                    <li><a href="https://os.synrc.com/os-hyper.pdf">SYNRC HYPERVISOR OS.1: VIRTIO XEN EXSI</a></li>
+                    <li><a href="https://os.synrc.com/os.txt">OS.1 Architecture</a></li>
+                    <li><a href="https://hv.synrc.com/hv.pdf">SYNRC HYPERVISOR: for OTP 20 Unicore seL4</a></li>
+                    <li><a href="https://hv.synrc.com/hv-smp.pdf">SYNRC HYPERVISOR: for OTP 30 4-Core seL4</a></li>
+                </ul>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>

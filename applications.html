@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Applications Plane (Служби)</title>
+    <link rel="stylesheet" href="index.css?v=6">
+    <style>
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+        @media (max-width: 900px) {
+            .grid-2 {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav class="sticky">
+        <div class="nav-container">
+            <a href="index.html" class="logo"><img width="50" style="margin-bottom:-15px;" src="https://n2o.dev/img/synrc.svg"></a>
+            <ul class="nav-links">
+                <li><a href="index.html">Intro</a></li>
+                <li><a href="products.html">Products</a></li>
+                <li>Applications</li>
+                <li><a href="downloads.html">Downloads</a></li>
+                <li><a href="web.html">Web</a></li>
+                <li><a href="compute.html">Compute</a></li>
+                <li><a href="security.html">Security</a></li>
+                <li><a href="control.html">Control</a></li>
+                <li><a href="service.html">Service</a></li>
+                <li><a href="system_alpine.html">Alpine</a></li>
+                <li><a href="system_netbsd.html">NetBSD</a></li>
+                <li><a href="hypervision.html">Hypervision</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <header>
+        <div class="hero-content">
+            <h1>Applications Plane (Служби)</h1>
+            <p class="hero-subtitle">Application services, configuration, registry, and enterprise infrastructure.</p>
+        </div>
+    </header>
+
+    <main>
+        <section>
+            <h2>Infrastructure Services</h2>
+            <div style="max-width:800px;margin:0 auto;">
+                <p>The <b>Applications Plane</b> houses the fundamental network and business infrastructure components required to run a full sovereign state or enterprise system. These services act as the glue between the high-level Products Plane and the low-level Control Plane.</p>
+            </div>
+
+            <div class="grid-2">
+                <div class="package-card">
+                    <h3><a href="https://abac.erp.uno">Контроль</a> (ABAC)</h3>
+                    <hr>
+                    <p>Attribute-Based Access Control logic enforcing strict isolation.</p>
+                    <pre class="code-snippet">
+% ABAC Evaluation
+eval(Subj, Obj, Act, Env) ->
+    case policy_match(Subj, Obj, Act, Env) of
+        allow -> ok;
+        deny  -> {error, unauthorized}
+    end.</pre>
+                </div>
+                
+                <div class="package-card">
+                    <h3><a href="https://erp.uno/bpmn/">Процеси</a> (BPMN)</h3>
+                    <hr>
+                    <p>BPMN ISO 19510 engine mapping business logic to executable state machines.</p>
+                    <pre class="code-snippet">
+% BPMN Process execution
+-record(process, {
+    id :: binary(),
+    state :: term(),
+    history :: list()
+}).</pre>
+                </div>
+
+                <div class="package-card">
+                    <h3><a href="https://cm.n2o.dev/">Конфігурації</a> (CMDB)</h3>
+                    <hr>
+                    <p>Configuration management providing ground-truth topology for the cluster.</p>
+                </div>
+                
+                <div class="package-card">
+                    <h3><a href="https://ns.n2o.dev">Імена</a> &amp; <a href="https://erp.uno/vpn/">Тунелі</a></h3>
+                    <hr>
+                    <p>DNSSEC (BCP 237) and virtual L2/L3 Erlang VPN for secure mesh connectivity.</p>
+                </div>
+
+                <div class="package-card">
+                    <h3><a href="https://erp.uno/ca/">Сертифікати</a> &amp; <a href="https://erp.uno/ias/">Авторизація</a></h3>
+                    <hr>
+                    <p>Certificate Authority Attributes PKI tightly coupled with Identity, Certificates, and Policies.</p>
+                </div>
+
+                <div class="package-card">
+                    <h3><a href="https://erp.uno/chat/">Комунікатор</a> &amp; <a href="https://rtp.zencrypted.uk">Конференцзв'язок</a></h3>
+                    <hr>
+                    <p>TLS X.690 DER + BUDDHA chat messenger combined with OpenWebRTC / GStreamer media channels.</p>
+                </div>
+            </div>
+        </section>
+        
+        <section>
+            <h2>Core Tooling</h2>
+            <div class="grid-2">
+                <div class="product-card">
+                    <h3>Compilers &amp; Frameworks</h3>
+                    <ul>
+                        <li><a href="https://asn1.zencrypted.uk">Компілятор (ASN.1)</a> — Erlang C99 Swift compiler</li>
+                        <li><a href="https://ws.n2o.dev">Фреймворк</a> — N2O / NITRO</li>
+                        <li><a href="https://form.n2o.dev">Форми</a> — X-FORM validation</li>
+                    </ul>
+                </div>
+                <div class="product-card">
+                    <h3>Protocols &amp; Brokers</h3>
+                    <ul>
+                        <li><a href="https://mqtt.erp.uno">Брокер</a> — MQTT v5.0 (ISO/IEC 20922)</li>
+                        <li><a href="https://turn.erp.uno">Потоки</a> — STUN/TURN</li>
+                        <li><a href="https://erp.uno/ldap/">Директорія</a> — PKI-aware LDAP / X.500</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="footer-columns">
+            <div>
+                <h4>Synrc Virtualization Environment</h4>
+                <p>OS.1 Hypervisor written in C, Erlang/OTP by <a rel="me" href="https://mathstodon.xyz/@5ht">5HT</a>.</p>
+            </div>
+            <div>
+                <h4>Resources</h4>
+                <ul>
+                    <li><a href="https://os.synrc.com/os-hyper.pdf">SYNRC HYPERVISOR OS.1: VIRTIO XEN EXSI</a></li>
+                    <li><a href="https://os.synrc.com/os.txt">OS.1 Architecture</a></li>
+                    <li><a href="https://hv.synrc.com/hv.pdf">SYNRC HYPERVISOR: for OTP 20 Unicore seL4</a></li>
+                    <li><a href="https://hv.synrc.com/hv-smp.pdf">SYNRC HYPERVISOR: for OTP 30 4-Core seL4</a></li>
+                </ul>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Control Plane (CHIMERA)</title>
+    <link rel="stylesheet" href="index.css?v=6">
+    <style>
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+        @media (max-width: 900px) {
+            .grid-2 {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav class="sticky">
+        <div class="nav-container">
+            <a href="index.html" class="logo"><img width="50" style="margin-bottom:-15px;" src="https://n2o.dev/img/synrc.svg"></a>
+            <ul class="nav-links">
+                <li><a href="index.html">Intro</a></li>
+                <li><a href="products.html">Products</a></li>
+                <li><a href="applications.html">Applications</a></li>
+                <li><a href="downloads.html">Downloads</a></li>
+                <li><a href="web.html">Web</a></li>
+                <li><a href="compute.html">Compute</a></li>
+                <li><a href="security.html">Security</a></li>
+                <li>Control</li>
+                <li><a href="service.html">Service</a></li>
+                <li><a href="system_alpine.html">Alpine</a></li>
+                <li><a href="system_netbsd.html">NetBSD</a></li>
+                <li><a href="hypervision.html">Hypervision</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <header>
+        <div class="hero-content">
+            <h1>Control Plane (CHIMERA)</h1>
+            <p class="hero-subtitle">The capability broker managing systems, deployments, and networks.</p>
+        </div>
+    </header>
+
+    <main>
+        <section>
+            <h2>Capability Broker</h2>
+            <div style="max-width:800px;margin:0 auto;">
+                <p>The <b>System Admin BEAM</b> acts as the Control Plane, serving as the sole broker of capabilities in OS.1. It implements the Chimera layer, managing terminal assignations, namespace sandboxing, virtual networks, and CI/CD operations without possessing any direct access to long-term keys.</p>
+            </div>
+
+            <div class="grid-2">
+                <div class="package-card">
+                    <h3><a href="https://github.com/synrc/os">OS</a> &amp; <a href="https://cd.erp.uno">CD</a></h3>
+                    <hr>
+                    <p>Core system services orchestrating cluster, names, mounts, and continuous deployment reliability.</p>
+                    <pre class="code-snippet">
+% Deploy Unikernel
+deploy(Manifest) ->
+    case abac:check(admin) of
+        ok -> vmm:start_vm(Manifest);
+        _  -> {error, denied}
+    end.</pre>
+                </div>
+                
+                <div class="package-card">
+                    <h3><a href="https://github.com/bitedits/net">NET</a> &amp; <a href="https://github.com/zencrypted/vpn">VPN</a></h3>
+                    <hr>
+                    <p>Management of `nftables` firewall rules and virtual L2/L3 private network topologies directly from Erlang.</p>
+                </div>
+
+                <div class="package-card">
+                    <h3><a href="https://github.com/bitedits/land">LAND</a></h3>
+                    <hr>
+                    <p>Strict Landlock MAC sandboxing and capability restrictions mapped to Application Plane processes.</p>
+                </div>
+
+                <div class="package-card">
+                    <h3><a href="https://github.com/erpuno/abac">ABAC</a> &amp; <a href="https://github.com/zencrypted/ias">IAS</a></h3>
+                    <hr>
+                    <p>Certified access control linked with Identity and Authentication verification systems.</p>
+                </div>
+
+                <div class="product-card">
+                    <h3>Compilers &amp; Directories</h3>
+                    <hr>
+                    <ul>
+                        <li><a href="https://github.com/synrc/ns">NS</a> — DNSSEC name server</li>
+                        <li><a href="https://github.com/synrc/asn1">ASN.1</a> — ASN.1 compiler</li>
+                        <li><a href="https://github.com/synrc/rpc">RPC</a> — BERT compiler</li>
+                        <li><a href="https://github.com/synrc/ldap">LDAP</a> — Directory services</li>
+                        <li><a href="https://github.com/synrc/bridge">BRIDGE</a> — Security-to-Application proxy</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="footer-columns">
+            <div>
+                <h4>Synrc Virtualization Environment</h4>
+                <p>OS.1 Hypervisor written in C, Erlang/OTP by <a rel="me" href="https://mathstodon.xyz/@5ht">5HT</a>.</p>
+            </div>
+            <div>
+                <h4>Resources</h4>
+                <ul>
+                    <li><a href="https://os.synrc.com/os-hyper.pdf">SYNRC HYPERVISOR OS.1: VIRTIO XEN EXSI</a></li>
+                    <li><a href="https://os.synrc.com/os.txt">OS.1 Architecture</a></li>
+                    <li><a href="https://hv.synrc.com/hv.pdf">SYNRC HYPERVISOR: for OTP 20 Unicore seL4</a></li>
+                    <li><a href="https://hv.synrc.com/hv-smp.pdf">SYNRC HYPERVISOR: for OTP 30 4-Core seL4</a></li>
+                </ul>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>

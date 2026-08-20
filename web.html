@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web (Сервіси)</title>
+    <link rel="stylesheet" href="index.css?v=6">
+    <style>
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+        @media (max-width: 900px) {
+            .grid-2 {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav class="sticky">
+        <div class="nav-container">
+            <a href="index.html" class="logo"><img width="50" style="margin-bottom:-15px;" src="https://n2o.dev/img/synrc.svg"></a>
+            <ul class="nav-links">
+                <li><a href="index.html">Intro</a></li>
+                <li><a href="products.html">Products</a></li>
+                <li><a href="applications.html">Applications</a></li>
+                <li><a href="downloads.html">Downloads</a></li>
+                <li>Web</li>
+                <li><a href="compute.html">Compute</a></li>
+                <li><a href="security.html">Security</a></li>
+                <li><a href="control.html">Control</a></li>
+                <li><a href="service.html">Service</a></li>
+                <li><a href="system_alpine.html">Alpine</a></li>
+                <li><a href="system_netbsd.html">NetBSD</a></li>
+                <li><a href="hypervision.html">Hypervision</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <header>
+        <div class="hero-content">
+            <h1>Web (Сервіси)</h1>
+            <p class="hero-subtitle">High-performance WebSocket protocols and declarative UI frameworks.</p>
+        </div>
+    </header>
+
+    <main>
+        <section>
+            <h2>N2O Ecosystem</h2>
+            <div style="max-width:800px;margin:0 auto;">
+                <p>The Web Plane represents the outer boundary of the untrusted application environment. Powered by the N2O ecosystem, these libraries minimize the transport footprint and provide ultra-fast binary serialization (BERT/JSON/gRPC/SOAP) over WebSockets and REST.</p>
+            </div>
+
+            <div class="grid-2">
+                <div class="package-card">
+                    <h3><a href="https://ws.n2o.dev">N2O</a></h3>
+                    <hr>
+                    <p>The core Web-Telecom framework. Lightweight, high-concurrency WebSocket server loop implemented in Erlang/OTP.</p>
+                    <pre class="code-snippet">
+% N2O Event Loop
+event({client, Msg}) ->
+    wf:info(?MODULE, "Received: ~p", [Msg]),
+    wf:send({server, &lt;&lt;"Acknowledged"&gt;&gt;});
+event(init) ->
+    wf:reg({client, self()}).</pre>
+                </div>
+                
+                <div class="package-card">
+                    <h3><a href="https://nitro.n2o.dev">NITRO</a></h3>
+                    <hr>
+                    <p>Declarative web UI framework representing HTML structures as Erlang records. Fully isomorphic DOM generation.</p>
+                    <pre class="code-snippet">
+% NITRO Declarative UI
+#panel{id=app, class=[grid], body=[
+  #h1{body="Welcome to ERP.1"},
+  #button{id=btn, body="Login", postback=login}
+]}</pre>
+                </div>
+
+                <div class="package-card">
+                    <h3><a href="https://form.n2o.dev">FORM</a></h3>
+                    <hr>
+                    <p>Business X-forms processing and dynamic validation engine for seamless CRUD generation.</p>
+                </div>
+
+                <div class="package-card">
+                    <h3><a href="https://rpc.n2o.dev">RPC</a></h3>
+                    <hr>
+                    <p>Polyglot binary protocol compiler supporting BERT, gRPC, SOAP, Swift, and JavaScript client bindings.</p>
+                </div>
+
+                <div class="product-card">
+                    <h3>Additional Modules</h3>
+                    <hr>
+                    <ul>
+                        <li><a href="https://rest.n2o.dev">REST</a> - REST Yoctoframework (< 100 LOC)</li>
+                        <li><a href="https://sample.n2o.dev">SAMPLE</a> - Clean WebSocket sample application</li>
+                        <li><a href="https://review.n2o.dev">REVIEW</a> - MQTT-based application boilerplate</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="footer-columns">
+            <div>
+                <h4>Synrc Virtualization Environment</h4>
+                <p>OS.1 Hypervisor written in C, Erlang/OTP by <a rel="me" href="https://mathstodon.xyz/@5ht">5HT</a>.</p>
+            </div>
+            <div>
+                <h4>Resources</h4>
+                <ul>
+                    <li><a href="https://os.synrc.com/os-hyper.pdf">SYNRC HYPERVISOR OS.1: VIRTIO XEN EXSI</a></li>
+                    <li><a href="https://os.synrc.com/os.txt">OS.1 Architecture</a></li>
+                    <li><a href="https://hv.synrc.com/hv.pdf">SYNRC HYPERVISOR: for OTP 20 Unicore seL4</a></li>
+                    <li><a href="https://hv.synrc.com/hv-smp.pdf">SYNRC HYPERVISOR: for OTP 30 4-Core seL4</a></li>
+                </ul>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>

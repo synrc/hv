@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Service Plane (BEAM)</title>
+    <link rel="stylesheet" href="index.css?v=6">
+    <style>
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+        @media (max-width: 900px) {
+            .grid-2 {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav class="sticky">
+        <div class="nav-container">
+            <a href="index.html" class="logo"><img width="50" style="margin-bottom:-15px;" src="https://n2o.dev/img/synrc.svg"></a>
+            <ul class="nav-links">
+                <li><a href="index.html">Intro</a></li>
+                <li><a href="products.html">Products</a></li>
+                <li><a href="applications.html">Applications</a></li>
+                <li><a href="downloads.html">Downloads</a></li>
+                <li><a href="web.html">Web</a></li>
+                <li><a href="compute.html">Compute</a></li>
+                <li><a href="security.html">Security</a></li>
+                <li><a href="control.html">Control</a></li>
+                <li>Service</li>
+                <li><a href="system_alpine.html">Alpine</a></li>
+                <li><a href="system_netbsd.html">NetBSD</a></li>
+                <li><a href="hypervision.html">Hypervision</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <header>
+        <div class="hero-content">
+            <h1>Service Plane (BEAM)</h1>
+            <p class="hero-subtitle">Userland applications operating in completely unprivileged bounds.</p>
+        </div>
+    </header>
+
+    <main>
+        <section>
+            <h2>Userland Operations</h2>
+            <div style="max-width:800px;margin:0 auto;">
+                <p>The <b>Application BEAM</b> (Service Plane) handles all untrusted logic, sessions, and multi-tenant applications. Unlike standard container engines, OS.1 runs these workloads entirely without ambient authority. Rights are dynamically leased via capability tokens, minimizing blast radiuses in the event of compromise.</p>
+            </div>
+
+            <div class="grid-2">
+                <div class="package-card">
+                    <h3><a href="https://github.com/bitedits/x11">X11</a> &amp; <a href="https://github.com/bitedits/wm">WM</a></h3>
+                    <hr>
+                    <p>Rootless Xorg and Xwayland environments managed by a custom Erlang window manager (ctwm + OTP) for minimal overhead.</p>
+                    <pre class="code-snippet">
+% X11 Rootless WM Init
+init_wm() ->
+    x11:start_link([{display, ":0"}]),
+    wm:register_hook(on_map_request, fun map_handler/1).</pre>
+                </div>
+                
+                <div class="package-card">
+                    <h3><a href="https://github.com/synrc/chat">CHAT</a> &amp; <a href="https://github.com/erpuno/mqtt">MQTT</a></h3>
+                    <hr>
+                    <p>Highly scalable messaging protocols terminating inside the Application Plane for user-space consumption.</p>
+                </div>
+
+                <div class="package-card">
+                    <h3><a href="https://github.com/zencrypted/gst">GST</a> &amp; <a href="https://github.com/erpuno/turn">TURN</a></h3>
+                    <hr>
+                    <p>GStreamer / PipeWire integrations alongside STUN/TURN servers for establishing resilient WebRTC audio/video sessions.</p>
+                </div>
+
+                <div class="product-card">
+                    <h3>Developer Tooling</h3>
+                    <hr>
+                    <ul>
+                        <li><a href="https://github.com/synrc/mad">MAD</a> — package manager</li>
+                        <li><a href="https://github.com/5HT/pie">PIE</a> — Pie Editor</li>
+                        <li><a href="https://github.com/synrc/fs">FS</a> — file-sytem listener</li>
+                        <li><a href="https://github.com/synrc/rest">REST</a> — REST framework</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="footer-columns">
+            <div>
+                <h4>Synrc Virtualization Environment</h4>
+                <p>OS.1 Hypervisor written in C, Erlang/OTP by <a rel="me" href="https://mathstodon.xyz/@5ht">5HT</a>.</p>
+            </div>
+            <div>
+                <h4>Resources</h4>
+                <ul>
+                    <li><a href="https://os.synrc.com/os-hyper.pdf">SYNRC HYPERVISOR OS.1: VIRTIO XEN EXSI</a></li>
+                    <li><a href="https://os.synrc.com/os.txt">OS.1 Architecture</a></li>
+                    <li><a href="https://hv.synrc.com/hv.pdf">SYNRC HYPERVISOR: for OTP 20 Unicore seL4</a></li>
+                    <li><a href="https://hv.synrc.com/hv-smp.pdf">SYNRC HYPERVISOR: for OTP 30 4-Core seL4</a></li>
+                </ul>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>

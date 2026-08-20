@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Products Plane (ІКС)</title>
+    <link rel="stylesheet" href="index.css?v=6">
+    <style>
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+        @media (max-width: 900px) {
+            .grid-2 {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav class="sticky">
+        <div class="nav-container">
+            <a href="index.html" class="logo"><img width="50" style="margin-bottom:-15px;" src="https://n2o.dev/img/synrc.svg"></a>
+            <ul class="nav-links">
+                <li><a href="index.html">Intro</a></li>
+                <li>Products</li>
+                <li><a href="applications.html">Applications</a></li>
+                <li><a href="downloads.html">Downloads</a></li>
+                <li><a href="web.html">Web</a></li>
+                <li><a href="compute.html">Compute</a></li>
+                <li><a href="security.html">Security</a></li>
+                <li><a href="control.html">Control</a></li>
+                <li><a href="service.html">Service</a></li>
+                <li><a href="system_alpine.html">Alpine</a></li>
+                <li><a href="system_netbsd.html">NetBSD</a></li>
+                <li><a href="hypervision.html">Hypervision</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <header>
+        <div class="hero-content">
+            <h1>Products Plane (ІКС)</h1>
+            <p class="hero-subtitle">High-level enterprise products built on top of the Synrc VE stack.</p>
+        </div>
+    </header>
+
+    <main>
+        <section>
+            <h2>Enterprise Resource Planning</h2>
+            <div style="max-width:800px;margin:0 auto;">
+                <p>The <b>Products Plane</b> (ІКС) consists of end-user business applications designed to handle specialized domains like Healthcare, Education, and Logistics. These are the consumer-facing modules of the ERP.1 ecosystem, entirely isolated from cryptographic keys and system controls, operating on top of a highly constrained capability model.</p>
+            </div>
+            
+            <div class="grid-2">
+                <div class="package-card">
+                    <h3><a href="https://erp.uno/health/">Здоров'я</a></h3>
+                    <hr>
+                    <p>HL7-compliant medical information system (MIS). Designed for integration with eHealth platforms.</p>
+                </div>
+                
+                <div class="package-card">
+                    <h3><a href="https://erp.uno/acc/">Облік</a> &amp; <a href="https://erp.uno/warehouse/">Склад</a></h3>
+                    <hr>
+                    <p>Accounting, HR, Payroll ERP tightly integrated with Warehouse &amp; Material Supply management for precise physical asset tracking.</p>
+                </div>
+
+                <div class="package-card">
+                    <h3><a href="https://erp.uno/edu/">Освіта</a></h3>
+                    <hr>
+                    <p>ISO 21001 education management system for universities and distributed learning infrastructures.</p>
+                </div>
+
+                <div class="package-card">
+                    <h3><a href="https://erp.uno/mail/">Документи</a></h3>
+                    <hr>
+                    <p>Electronic document CRM supporting legally binding electronic signatures and strict audit trails.</p>
+                </div>
+                
+                <div class="package-card">
+                    <h3><a href="https://erp.uno/cart/">Реєстри</a></h3>
+                    <hr>
+                    <p>Universal state and corporate registers built for extreme scalability using distributed KVS stores.</p>
+                </div>
+
+                <div class="package-card">
+                    <h3><a href="https://erp.uno/pm/">Проєкти</a> &amp; <a href="https://erp.uno/itsm/">Інциденти</a></h3>
+                    <hr>
+                    <p>Local Jira/Confluence equivalent (with LaTeX support) combined with ITSM, billing, and tariffication capabilities.</p>
+                </div>
+
+                <div class="package-card">
+                    <h3><a href="https://erp.uno/ai/">Істотність</a> &amp; <a href="https://erp.uno/olap/">Аналітика</a></h3>
+                    <hr>
+                    <p>On-premise AI and semantic search engines tightly coupled with a local DWH / OLAP cube for analytics.</p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="footer-columns">
+            <div>
+                <h4>Synrc Virtualization Environment</h4>
+                <p>OS.1 Hypervisor written in C, Erlang/OTP by <a rel="me" href="https://mathstodon.xyz/@5ht">5HT</a>.</p>
+            </div>
+            <div>
+                <h4>Resources</h4>
+                <ul>
+                    <li><a href="https://os.synrc.com/os-hyper.pdf">SYNRC HYPERVISOR OS.1: VIRTIO XEN EXSI</a></li>
+                    <li><a href="https://os.synrc.com/os.txt">OS.1 Architecture</a></li>
+                    <li><a href="https://hv.synrc.com/hv.pdf">SYNRC HYPERVISOR: for OTP 20 Unicore seL4</a></li>
+                    <li><a href="https://hv.synrc.com/hv-smp.pdf">SYNRC HYPERVISOR: for OTP 30 4-Core seL4</a></li>
+                </ul>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>
