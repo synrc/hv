@@ -43,7 +43,7 @@
     <header>
         <div class="hero-content">
             <h1>Control Plane (CHIMERA)</h1>
-            <p class="hero-subtitle">The capability broker managing systems, deployments, and networks.</p>
+            <p class="hero-subtitle">The capability broker managing systems, deployments, and networks based in Alpine/Chimera Linux.</p>
         </div>
     </header>
 
@@ -62,12 +62,11 @@
                     <pre class="code-snippet">
 % Deploy Unikernel
 deploy(Manifest) ->
-    case abac:check(admin) of
+    case abac:check(Manifest, admin) of
         ok -> vmm:start_vm(Manifest);
         _  -> {error, denied}
     end.</pre>
                 </div>
-                
                 <div class="package-card">
                     <h3><a href="https://github.com/bitedits/net">NET</a> &amp; <a href="https://github.com/zencrypted/vpn">VPN</a></h3>
                     <hr>

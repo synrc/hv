@@ -63,13 +63,12 @@
     </header>
 
     <main>
-    
         <section>
             <h2>The Architecture Story</h2>
             <div class="story-container">
                 <div class="plane-header">0. The Bedrock</div>
                 <p>At the absolute foundation of the Synrc Virtualization Environment lies the <b>HYPERVISION</b> plane, a highly secure layer powered by the seL4 microkernel. Operating as the bedrock, it manages memory via strict capability derivations and runs the native <b>SYSTEM</b> planes in complete isolation. Depending on the desired UNIX semantics, administrators can deploy either the <b>ALPINE</b> or <b>NETBSD</b> flavors, establishing a deterministic and strictly MAC-sandboxed environment tailored for Unikernels and NanoVMs.</p>
-                
+
                 <div class="plane-header">1. The Capability Broker</div>
                 <p>Upon this solid foundation, the capability-driven <b>CONTROL</b> plane takes charge. Here, the CHIMERA broker allocates all system resources. It acts as the sole authority managing namespace isolation via <b>LAND</b>, firewall networks through <b>NET</b> and <b>VPN</b>, and overarching cluster orchestration with <b>CD</b> and <b>OS</b>. Within this plane, secure DNSSEC namespaces are governed by <b>NS</b>, while identity and directory structures are maintained by <b>LDAP</b> and <b>IAS</b>, all rigorously regulated by the certified Attribute-Based Access Control logic of <b>ABAC</b>.</p>
 
