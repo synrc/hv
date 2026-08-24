@@ -125,6 +125,41 @@ permit nopass sys as root cmd /sbin/reboot</pre>
                 </div>
             </div>
         </section>
+
+        <section>
+            <h2>Specification &amp; Architecture</h2>
+            <div class="story-container">
+                <div class="plane-header">0. Alpine Linux Architecture</div>
+                <p>The Alpine system userland relies on static Musl linkage, Busybox/Toybox utilities, OpenRC init, and Landlock sandboxing:</p>
+                
+                <div class="grid-2" style="margin-top: 1.5rem; margin-bottom: 2.5rem;">
+                    <div class="package-card" style="padding: 1.8rem;">
+                        <h3><a href="https://alpinelinux.org" style="color: var(--accent);">ALPINE SPEC</a></h3>
+                        <hr>
+                        <ul>
+                            <li><a href="https://musl.libc.org"><b>1. Musl C Standard Library</b></a></li>
+                            <li><a href="https://landlock.io"><b>2. Landlock Unprivileged Sandboxing</b></a></li>
+                            <li><a href="https://github.com/bitedits/openrc"><b>3. OpenRC Service Supervisor</b></a></li>
+                            <li><a href="https://alpinelinux.org"><b>4. APK Package Management</b></a></li>
+                        </ul>
+                    </div>
+
+                    <div class="package-card" style="padding: 1.8rem;">
+                        <h3><a href="https://alpinelinux.org" style="color: var(--accent);">ALPINE CODE POLICY</a></h3>
+                        <hr>
+                        <ul>
+                            <li><a href="https://alpinelinux.org"><b>GPL-2.0 / MIT Open Source Licensing</b></a></li>
+                            <li><a href="https://alpinelinux.org"><b>Minimal Footprint Root Filesystem</b></a></li>
+                            <li><a href="https://alpinelinux.org"><b>Static Linkage &amp; Hardened Toolchain</b></a></li>
+                            <li><a href="https://alpinelinux.org"><b>Landlock Capability Containment</b></a></li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="plane-header">1. VirtIO &amp; Hypervisor Handoff</div>
+                <p>When running as a System Plane image in Synrc VE OS.1, Alpine Linux boots via <b>Limine</b>, <b>TianoCore EDK II (UEFI)</b>, or Linux direct boot in <b>seL4 Protection Domains (PDs)</b>. Rootfs mounts via VirtIO-Block / SquashFS, with networking handled by VirtIO-Net and console over VirtIO-Console under Landlock isolation.</p>
+            </div>
+        </section>
     </main>
 
     <footer>

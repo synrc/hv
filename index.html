@@ -106,7 +106,7 @@
     <section>
             <h2>The Bootloader</h2>
             <div class="story-container">
-                <p>The firmly engineered <b>Synrc HV Bootloader</b> sits at the very beginning of the execution chain. Designed for maximum flexibility, it is capable of linking against <b>Limine</b>, <b>TianoCore EDK II</b>, or operating as raw <b>seL4 PDs</b>. The robust interactive menu allows administrators to dynamically select between various embedded systems, hypervisors, and UNIX environments (including NuttX, Erlang/OTP Unikernels, NetBSD, and Alpine Linux) before handing off kernel parameters to the seL4 shared memory block.</p>
+                <p>The firmly engineered <b>Synrc HV Bootloader</b> sits at the very beginning of the execution chain. Designed for high assurance and minimal footprint, it supports lightweight handoff mechanisms including <b>seL4 Microkit Loader</b>, <b>PVH Direct ELF Boot</b>, and <b>Coreboot</b> alongside raw <b>seL4 Protection Domains (PDs)</b>. The interactive menu allows administrators to dynamically select between embedded RTOS, hypervisors, and UNIX environments (including Skynet RT/NuttX, LK, BTRON, FreeBSD, NetBSD, and Alpine Linux) before handing off kernel parameters to the seL4 capability memory block.</p>
                 <center><img src="boot.png" alt="Bootloader Menu" style="max-width: 100%; border-radius: 8px; margin-bottom: 2rem; border: 1px solid var(--border);"></center>
             </div>
         </section>

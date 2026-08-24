@@ -179,7 +179,7 @@ make -j
                 </div>
 
                 <div class="plane-header">1. VirtIO &amp; Hypervisor Handoff</div>
-                <p>When running as a System Plane image in Synrc VE OS.1, Skynet RT / NuttX boots via <b>Limine</b>, <b>TianoCore EDK II</b>, or raw <b>seL4 Protection Domains (PDs)</b>. Hardware I/O and console output route directly through VirtIO primitives or serial streams inside isolated capability-managed sandboxes.</p>
+                <p>When running as a System Plane image in Synrc VE OS.1, Skynet RT / NuttX boots via <b>seL4 Microkit Loader</b>, <b>Slim Bootloader (SBL)</b>, or direct <b>seL4 Protection Domain (PD)</b> entry. Serial console, NSH shell, and I/O streams route directly through VirtIO-Console and VirtIO-Net drivers inside isolated real-time sandboxes.</p>
             </div>
         </section>
     </main>

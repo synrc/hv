@@ -155,7 +155,7 @@
                 </div>
 
                 <div class="plane-header">1. VirtIO &amp; Hypervisor Handoff</div>
-                <p>When running as a System Plane image in Synrc VE OS.1, LK boots via <b>Limine</b>, <b>TianoCore EDK II</b>, or raw <b>seL4 Protection Domains (PDs)</b>. Console input/output routes directly through VirtIO serial or framebuffer surfaces inside capability-isolated sandboxes.</p>
+                <p>When running as a System Plane image in Synrc VE OS.1, Little Kernel (LK) boots as a bare-metal ELF payload directly via <b>seL4 Microkit Loader</b>, <b>Coreboot</b>, or raw <b>seL4 Protection Domains (PDs)</b>. Debug console and fastboot communication route directly through VirtIO-Console or memory-mapped UART ring buffers inside capability-isolated sandboxes.</p>
             </div>
         </section>
     </main>

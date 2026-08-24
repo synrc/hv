@@ -176,7 +176,7 @@ kevent(kq, &amp;ev, 1, &amp;ev_out, 1, NULL);</pre>
                 </div>
 
                 <div class="plane-header">1. VirtIO &amp; Hypervisor Handoff</div>
-                <p>When running as a System Plane image in Synrc VE OS.1, FreeBSD boots via <b>Limine</b>, <b>TianoCore EDK II</b>, or raw <b>seL4 Protection Domains (PDs)</b>. Display and block devices route through VirtIO-GPU, VirtIO-Block, and VirtIO-Net drivers for high-throughput guest execution.</p>
+                <p>When running as a System Plane image in Synrc VE OS.1, FreeBSD boots via <b>Limine</b>, <b>TianoCore EDK II</b>, or native <b>FreeBSD Loader</b> inside raw <b>seL4 Protection Domains (PDs)</b>. Storage and network devices route through VirtIO-Block (vtbd) and VirtIO-Net (vtnet) drivers with Capsicum capability enforcement.</p>
             </div>
         </section>
     </main>

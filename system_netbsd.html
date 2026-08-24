@@ -118,6 +118,41 @@ npf=YES</pre>
                 </div>
             </div>
         </section>
+
+        <section>
+            <h2>Specification &amp; Architecture</h2>
+            <div class="story-container">
+                <div class="plane-header">0. NetBSD Architecture</div>
+                <p>The NetBSD guest environment provides authentic BSD userland tools, Veriexec signature checking, and Kauth mandatory access control:</p>
+                
+                <div class="grid-2" style="margin-top: 1.5rem; margin-bottom: 2.5rem;">
+                    <div class="package-card" style="padding: 1.8rem;">
+                        <h3><a href="https://www.netbsd.org" style="color: var(--accent);">NETBSD SPEC</a></h3>
+                        <hr>
+                        <ul>
+                            <li><a href="https://man.netbsd.org/veriexec.8"><b>1. Veriexec Executable Signature Integrity</b></a></li>
+                            <li><a href="https://man.netbsd.org/kauth.9"><b>2. Kauth Kernel Authorization Framework</b></a></li>
+                            <li><a href="https://man.netbsd.org/npf.conf.5"><b>3. NPF Stateful Packet Filter</b></a></li>
+                            <li><a href="https://www.pkgsrc.org"><b>4. Pkgsrc Cross-Platform Package Manager</b></a></li>
+                        </ul>
+                    </div>
+
+                    <div class="package-card" style="padding: 1.8rem;">
+                        <h3><a href="https://www.netbsd.org" style="color: var(--accent);">NETBSD CODE POLICY</a></h3>
+                        <hr>
+                        <ul>
+                            <li><a href="https://www.netbsd.org/about/redistribution.html"><b>BSD 2-Clause / 4-Clause Permissive License</b></a></li>
+                            <li><a href="https://www.netbsd.org"><b>High Portability Across 50+ CPU Architectures</b></a></li>
+                            <li><a href="https://man.netbsd.org/style.9"><b>NetBSD KNF (Kernel Normal Form) Guidelines</b></a></li>
+                            <li><a href="https://www.netbsd.org/support/security/"><b>Security Advisory Audit Pipeline</b></a></li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="plane-header">1. VirtIO &amp; Hypervisor Handoff</div>
+                <p>When running as a System Plane image in Synrc VE OS.1, NetBSD boots via <b>TianoCore EDK II</b>, <b>Multiboot2</b>, or native <b>NetBSD Bootloader</b> inside raw <b>seL4 Protection Domains (PDs)</b>. Storage and network devices route through VirtIO-Block (ld_virtio) and VirtIO-Net (vioif) drivers under Kauth capability authorization.</p>
+            </div>
+        </section>
     </main>
 
     <footer>
