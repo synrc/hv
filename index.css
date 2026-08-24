@@ -67,31 +67,14 @@ nav.sticky {
     border-bottom: 1px solid var(--border);
 }
 
-.nav-links {
-    display: flex;
-    gap: 2.25rem;
-    list-style: none;
-}
-
-.nav-links a {
-    color: var(--text-secondary);
-    text-decoration: none;
-    font-weight: 500;
-    transition: color 0.3s;
-}
-
-.nav-links a:hover {
-    color: RosyBrown;
-}
-
-
 .nav-container {
     max-width: 1380px;
     margin: 0 auto;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 1.25rem 2rem;
+    padding: 1rem 2rem;
+    position: relative;
 }
 
 .logo {
@@ -104,10 +87,164 @@ nav.sticky {
     -webkit-text-fill-color: transparent;
     text-decoration: none;
     transition: all 0.3s;
+    display: flex;
+    align-items: center;
 }
 
 .logo:hover {
     color: var(--accent);
+}
+
+.nav-links {
+    display: flex;
+    align-items: center;
+    gap: 1.8rem;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.nav-links a,
+.nav-links .dropdown-toggle {
+    color: var(--text-secondary);
+    text-decoration: none;
+    font-weight: 500;
+    font-size: 1.05rem;
+    transition: color 0.3s;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.nav-links a:hover,
+.nav-links a.active,
+.nav-links .dropdown-toggle:hover,
+.nav-links .dropdown.active .dropdown-toggle {
+    color: var(--accent);
+}
+
+/* Dropdown Container */
+.nav-links .dropdown {
+    position: relative;
+}
+
+.nav-links .dropdown-toggle .arrow {
+    font-size: 0.7rem;
+    transition: transform 0.3s ease;
+    display: inline-block;
+}
+
+.nav-links .dropdown:hover .dropdown-toggle .arrow,
+.nav-links .dropdown:focus-within .dropdown-toggle .arrow,
+.nav-links .dropdown.open .dropdown-toggle .arrow {
+    transform: rotate(180deg);
+}
+
+/* Dropdown Menu Popup */
+.nav-links .dropdown-menu {
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%) translateY(12px);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    background: rgba(255, 245, 250, 0.96);
+    backdrop-filter: blur(20px);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 0.5rem 0;
+    min-width: 170px;
+    box-shadow: 0 16px 36px -6px rgba(255, 93, 162, 0.2);
+    list-style: none;
+    transition: opacity 0.25s ease, transform 0.25s ease, visibility 0.25s ease;
+    z-index: 1010;
+}
+
+.nav-links .dropdown:hover .dropdown-menu,
+.nav-links .dropdown:focus-within .dropdown-menu,
+.nav-links .dropdown.open .dropdown-menu {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transform: translateX(-50%) translateY(6px);
+}
+
+.nav-links .dropdown-menu li {
+    margin: 0;
+    padding: 0;
+    display: block;
+}
+
+.nav-links .dropdown-menu a {
+    display: block;
+    padding: 0.55rem 1.35rem;
+    color: var(--text-secondary);
+    font-size: 0.98rem;
+    font-weight: 500;
+    white-space: nowrap;
+    transition: all 0.2s ease;
+    border-radius: 0;
+}
+
+.nav-links .dropdown-menu a:hover,
+.nav-links .dropdown-menu a.active {
+    background: rgba(255, 93, 162, 0.12);
+    color: var(--accent);
+    padding-left: 1.6rem;
+}
+
+/* Mobile Toggle */
+.nav-toggle {
+    display: none;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 0.5rem;
+    z-index: 1002;
+}
+
+.nav-toggle .hamburger {
+    display: block;
+    width: 24px;
+    height: 2px;
+    background: var(--accent);
+    position: relative;
+    transition: background 0.2s;
+}
+
+.nav-toggle .hamburger::before,
+.nav-toggle .hamburger::after {
+    content: '';
+    position: absolute;
+    width: 24px;
+    height: 2px;
+    background: var(--accent);
+    left: 0;
+    transition: transform 0.3s ease, top 0.3s ease;
+}
+
+.nav-toggle .hamburger::before {
+    top: -7px;
+}
+
+.nav-toggle .hamburger::after {
+    top: 7px;
+}
+
+.nav-toggle.open .hamburger {
+    background: transparent;
+}
+
+.nav-toggle.open .hamburger::before {
+    top: 0;
+    transform: rotate(45deg);
+}
+
+.nav-toggle.open .hamburger::after {
+    top: 0;
+    transform: rotate(-45deg);
 }
 
 /* HERO */
@@ -505,11 +642,85 @@ footer {
 @media (max-width: 860px) {
     .package-cards-grid { gap: 1.8rem 2rem; }
     .package-card { padding: 1.5rem 1.7rem; }
+
+    .nav-container {
+        padding: 0.85rem 1.25rem;
+    }
+
+    .nav-toggle {
+        display: block;
+    }
+
+    .nav-links {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        background: rgba(255, 240, 248, 0.98);
+        backdrop-filter: blur(24px);
+        border-bottom: 1px solid var(--border);
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0;
+        padding: 0;
+        max-height: 0;
+        overflow: hidden;
+        transition: max-height 0.35s cubic-bezier(0.23, 1, 0.32, 1), padding 0.35s ease;
+        box-shadow: 0 16px 36px rgba(0, 0, 0, 0.12);
+    }
+
+    .nav-links.open {
+        max-height: 600px;
+        padding: 0.75rem 0;
+        overflow-y: auto;
+    }
+
+    .nav-links > li {
+        width: 100%;
+    }
+
+    .nav-links > li > a,
+    .nav-links > li > .dropdown-toggle {
+        padding: 0.75rem 1.5rem;
+        width: 100%;
+        justify-content: space-between;
+        font-size: 1.05rem;
+    }
+
+    .nav-links .dropdown-menu {
+        position: static;
+        transform: none !important;
+        opacity: 1;
+        visibility: visible;
+        pointer-events: auto;
+        box-shadow: none;
+        border: none;
+        background: rgba(255, 255, 255, 0.45);
+        border-radius: 12px;
+        margin: 0.25rem 1.25rem 0.5rem 1.5rem;
+        padding: 0.25rem 0;
+        display: none;
+    }
+
+    .nav-links .dropdown:hover .dropdown-menu,
+    .nav-links .dropdown:focus-within .dropdown-menu,
+    .nav-links .dropdown.open .dropdown-menu {
+        display: block;
+    }
+
+    .nav-links .dropdown-menu a {
+        padding: 0.55rem 1.25rem;
+        font-size: 0.95rem;
+        white-space: normal;
+    }
+
+    .nav-links .dropdown-menu a:hover,
+    .nav-links .dropdown-menu a.active {
+        padding-left: 1.5rem;
+    }
 }
 
 @media (max-width: 768px) {
-    .nav-container { padding: 1rem 1.5rem; }
-    .nav-links { gap: 1.5rem; }
     main { padding: 3.5rem 1.5rem 6rem; }
     h2 { font-size: 2.15rem; }
 }
