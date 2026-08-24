@@ -342,6 +342,10 @@ h2 {
     padding: 2.5rem 2rem;
     transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
     backdrop-filter: blur(12px);
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
+    overflow: hidden;
 }
 
 .product-card:hover, .package-card:hover {
@@ -366,7 +370,7 @@ h2 {
 
 .package-cards-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(360px, 100%), 1fr));
     gap: 2rem 2.4rem;
     align-items: start;
 }
@@ -379,6 +383,10 @@ h2 {
     backdrop-filter: blur(14px);
     transition: all 0.32s ease;
     box-shadow: 0 10px 28px -8px rgba(0,0,0,0.5);
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
+    overflow: hidden;
 }
 
 .package-card:hover {
@@ -420,6 +428,8 @@ section > p { max-width:720px;margin:0 auto;margin-top:30px; }
     color: var(--text-secondary);
     text-decoration: none;
     transition: color 0.22s ease, padding-left 0.22s ease;
+    word-break: break-word;
+    overflow-wrap: anywhere;
 }
 
 .package-card a:hover {
@@ -427,21 +437,44 @@ section > p { max-width:720px;margin:0 auto;margin-top:30px; }
     padding-left: 0.5rem;
 }
 
-
-
-/* CODE SNIPPET – now uses consistent accent family */
-.code-snippet {
+/* CODE SNIPPET – responsive & layout fit for desktop/mobile */
+.code-snippet,
+.package-card pre,
+.product-card pre,
+pre {
     background: #fff5fa;
     border: 1px solid var(--border);
     border-radius: var(--radius);
-    padding: 1.5rem;
+    padding: 1.2rem 1.4rem;
     font-family: ui-monospace, 'Cascadia Mono', 'Segoe UI Mono', monospace;
-    font-size: 0.95rem;
+    font-size: 0.92rem;
     line-height: 1.5;
-    overflow-x: auto;
     color: var(--accent);
-    margin: 2rem 0;
-    white-space: pre;
+    margin: 1.5rem 0 1rem;
+    white-space: pre-wrap;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+    max-width: 100%;
+    overflow-x: auto;
+    box-sizing: border-box;
+}
+
+.grid-2 {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 2rem;
+    margin-top: 2rem;
+}
+
+.grid-2 > * {
+    min-width: 0;
+    max-width: 100%;
+}
+
+@media (max-width: 900px) {
+    .grid-2 {
+        grid-template-columns: minmax(0, 1fr);
+    }
 }
 
 .library-index {

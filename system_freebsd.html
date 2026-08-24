@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>System Plane (NuttX) — Synrc Virtualization Environment VE OS.1</title>
+    <title>System Plane (FreeBSD) — Synrc Virtualization Environment VE OS.1</title>
     <link rel="stylesheet" href="index.css?v=1">
     <style>
         .grid-2 {
@@ -50,9 +50,9 @@
                     <ul class="dropdown-menu">
                         <li><a href="https://hv.synrc.com/system_alpine.html">Alpine</a></li>
                         <li><a href="https://hv.synrc.com/system_netbsd.html">NetBSD</a></li>
-                        <li><a href="system_freebsd.html">FreeBSD</a></li>
+                        <li><a href="system_freebsd.html" class="active">FreeBSD</a></li>
                         <li><a href="https://hv.synrc.com/system_btron.html">BTRON</a></li>
-                        <li><a href="system_nuttx.html" class="active">NuttX</a></li>
+                        <li><a href="https://hv.synrc.com/system_nuttx.html">NuttX</a></li>
                         <li><a href="system_lk.html">LK</a></li>
                     </ul>
                 </li>
@@ -63,86 +63,83 @@
 
     <header>
         <div class="hero-content">
-            <h1>System Plane (NuttX)</h1>
-            <p class="hero-subtitle">The native real-time POSIX operating system runtime utilizing Skynet RT / Apache NuttX 12.x for microcontrollers and embedded runtimes.</p>
+            <h1>System Plane (FreeBSD)</h1>
+            <p class="hero-subtitle">The premier 4.4BSD Unix userland, Capsicum security framework, and ZFS storage engine for Synrc Virtualization Environment VE OS.1.</p>
         </div>
     </header>
 
     <main>
         <section>
-            <h2>NuttX Guest Environment</h2>
+            <h2>FreeBSD Guest Environment</h2>
             <div style="max-width:850px;margin:0 auto;text-align:center;">
-                <p>The <b>NuttX System Plane</b> provides a cleanroom, POSIX-compliant ANSI C99 real-time operating system runtime based on <b>Skynet RT</b> (an Apache 2.0 licensed fork of Apache NuttX). Tailored for embedded control, low-latency microcontrollers, AtomVM execution, and Sokhatsky Commander, it features a minimal footprint (~300K lines of code, capped at 2.88MB), a Kconfig/make build system, and support for ARMv7-M, ARMv7-A, ARMv8-M, ARMv8-A, and BCM2711 architectures.</p>
+                <p>The <b>FreeBSD System Plane</b> provides a high-assurance, enterprise-grade 4.4BSD-Lite2 derived UNIX guest environment for OS.1. Utilizing Capsicum capability mode sandboxing, FreeBSD Jails, OpenZFS 128-bit storage, bhyve hypervisor primitives, and kqueue event scheduling, it delivers unrivaled networking performance and security compliance.</p>
             </div>
 
             <div class="grid-2">
                 <div class="package-card">
-                    <h3><a href="https://bitedits.github.io/rt/">SKYNET RT</a> &amp; <a href="https://nuttx.apache.org">NUTTX 12.X</a></h3>
+                    <h3><a href="https://www.freebsd.org">FREEBSD</a> &amp; <a href="https://man.freebsd.org/cgi/man.cgi?query=capsicum">CAPSICUM</a></h3>
                     <hr>
-                    <p>Apache 2.0 licensed ANSI C99 POSIX RTOS runtime optimized for high-assurance embedded systems and AtomVM Erlang microcontrollers.</p>
+                    <p>Fine-grained capability-based security framework restricting process syscalls and file descriptor rights inside capability sandboxes.</p>
                     <pre class="code-snippet">
-/* Skynet RT QEMU Execution */
-./tools/configure.sh qemu-armv7a:nsh
-kconfig-mconf Kconfig
-./tools/mkconfig . > include/nuttx/config.h
-make -j
-qemu-system-arm -M virt -device loader,file=nuttx -nographic</pre>
+/* Capsicum Sandbox Mode */
+cap_rights_t rights;
+cap_rights_init(&amp;rights, CAP_READ, CAP_WRITE, CAP_FSTAT);
+cap_rights_limit(fd, &amp;rights);
+cap_enter(); /* Enter capability sandbox */</pre>
                 </div>
                 
                 <div class="package-card">
-                    <h3><a href="https://bitedits.github.io/rt/#hal">HAL &amp; ARCHITECTURE</a></h3>
+                    <h3><a href="https://openzfs.org">OPENZFS</a> &amp; <a href="https://man.freebsd.org/cgi/man.cgi?query=geli">GELI ENCRYPTION</a></h3>
                     <hr>
-                    <p>Hardware Abstraction Layer defining CPU chips and board BSPs for clock counters, GPIO, I2C, SPI, UART, PWM, ADC, and power management.</p>
+                    <p>128-bit storage engine featuring copy-on-write transactions, end-to-end data integrity checksums, atomic snapshots, and disk encryption.</p>
                     <pre class="code-snippet">
-/* Raspberry Pi Pico 2 (RP2350) Target */
-./tools/configure.sh raspberrypi-pico-2:usbnsh
-make -j
-picotool uf2 convert nuttx.bin nuttx.uf2 \
-  --family absolute --offset 0x10000000</pre>
+# FreeBSD ZFS Pool &amp; GELI Encryption
+geli init -s 4096 -e AES-XTS -l 256 /dev/vtbd1
+geli attach /dev/vtbd1
+zpool create -O compression=lz4 tank /dev/vtbd1.eli</pre>
                 </div>
 
                 <div class="package-card">
-                    <h3><a href="https://bitedits.github.io/rt/#hal">RTOS KERNEL &amp; VFS</a></h3>
+                    <h3><a href="https://man.freebsd.org/cgi/man.cgi?query=jail">JAILS</a> &amp; <a href="https://man.freebsd.org/cgi/man.cgi?query=vimage">VIMAGE NETWORK</a></h3>
                     <hr>
-                    <p>Real-time scheduler, POSIX threads, semaphores, message queues, memory manager, ELF/FLAT loader, and Virtual File System (VFS, Plan 9 V9FS, ROMFS, BINFS).</p>
+                    <p>OS-level lightweight container virtualization with isolated process trees, memory boundaries, and virtualized network stacks (VNET/VIMAGE).</p>
                     <pre class="code-snippet">
-/* POSIX Application Simulation */
-./tools/configure.sh sim:nsh
-make -j
-./nuttx</pre>
+# FreeBSD Jail Execution
+jail -c name=sandbox path=/usr/jails/app \
+  host.hostname=app.local ip4.addr=192.168.1.50 \
+  exec.start="/bin/sh /etc/rc"</pre>
                 </div>
 
                 <div class="package-card">
-                    <h3><a href="https://bitedits.github.io/rt/#hal">HARDWARE BOARDS</a></h3>
+                    <h3><a href="https://man.freebsd.org/cgi/man.cgi?query=kqueue">KQUEUE &amp; VIRTIO</a></h3>
                     <hr>
-                    <p>Curated board primitives inheriting SoC chip drivers with full bootloader, DMA, and peripheral integration.</p>
+                    <p>High-performance event notification mechanism paired with VirtIO network and disk drivers for low-overhead hypervisor guest execution.</p>
                     <pre class="code-snippet">
-/* Supported Boards */
-- CXD56XX: Sony Spresense 6-core MCU
-- PICO2: Raspberry Pi Pico 2 (RP2350)
-- VIRTIO: QEMU VirtIO ARM Virt Target
-- SIM: Native POSIX Host Simulator</pre>
+/* kqueue Event Loop */
+int kq = kqueue();
+EV_SET(&amp;ev, fd, EVFILT_READ, EV_ADD | EV_ENABLE, 0, 0, NULL);
+kevent(kq, &amp;ev, 1, &amp;ev_out, 1, NULL);</pre>
                 </div>
 
                 <div class="product-card">
-                    <h3>Hardware &amp; Profiles</h3>
+                    <h3>Security &amp; Kernel</h3>
                     <hr>
                     <ul>
-                        <li><a href="https://bitedits.github.io/rt/#hal">PICO 2</a> — Raspberry Pi Pico 2 (RP2350 &amp; RP2040)</li>
-                        <li><a href="https://bitedits.github.io/rt/#hal">CXD5602</a> — Sony Spresense 6-core ARM Cortex-M4F</li>
-                        <li><a href="https://bitedits.github.io/rt/#hal">RK3399</a> — Rockchip Hexa-Core 64-bit SoC</li>
-                        <li><a href="https://bitedits.github.io/rt/#js">SIM &amp; QEMU</a> — POSIX Simulation &amp; ARM Virt Target</li>
+                        <li><a href="https://man.freebsd.org/cgi/man.cgi?query=capsicum">CAPSICUM</a> — Process capability sandboxing</li>
+                        <li><a href="https://man.freebsd.org/cgi/man.cgi?query=jail">JAILS</a> — Lightweight container virtualization</li>
+                        <li><a href="https://man.freebsd.org/cgi/man.cgi?query=mac">MAC</a> — Mandatory Access Control policy framework</li>
+                        <li><a href="https://man.freebsd.org/cgi/man.cgi?query=kqueue">KQUEUE</a> — Scalable I/O event notification</li>
                     </ul>
                 </div>
 
                 <div class="product-card">
-                    <h3>Kernel Subsystems</h3>
+                    <h3>Networking &amp; Storage</h3>
                     <hr>
                     <ul>
-                        <li><a href="https://bitedits.github.io/rt/#hal">SCHED &amp; TASK</a> — Priority-based POSIX threads &amp; tasks</li>
-                        <li><a href="https://bitedits.github.io/rt/#hal">V9FS &amp; ROMFS</a> — Plan 9 network FS &amp; Flash ROM file system</li>
-                        <li><a href="https://bitedits.github.io/rt/#hal">AtomVM</a> — Erlang VM execution on microcontrollers</li>
-                        <li><a href="https://bitedits.github.io/rt/#hal">LIBC &amp; LIBM</a> — Standard C runtime &amp; math libraries</li>
+                        <li><a href="https://openzfs.org">OPENZFS</a> — 128-bit file system &amp; snapshots</li>
+                        <li><a href="https://man.freebsd.org/cgi/man.cgi?query=vimage">VIMAGE</a> — Virtualized TCP/IP network stack</li>
+                        <li><a href="https://man.freebsd.org/cgi/man.cgi?query=pf">PF &amp; IPFW</a> — Stateful packet filtering firewall</li>
+                        <li><a href="https://man.freebsd.org/cgi/man.cgi?query=bhyve">BHYVE</a> — BSD micro-hypervisor primitives</li>
                     </ul>
                 </div>
             </div>
@@ -151,35 +148,35 @@ make -j
         <section>
             <h2>Specification &amp; Architecture</h2>
             <div class="story-container">
-                <div class="plane-header">0. Skynet RT Specification &amp; Build System</div>
-                <p>Skynet RT provides a menu-driven configuration pipeline (`kconfig-mconf Kconfig`) and POSIX build architecture organized into HAL, Kernel, Drivers, File Systems, and Userland Applications:</p>
+                <div class="plane-header">0. FreeBSD 14.x / 4.4BSD Architecture</div>
+                <p>The complete FreeBSD system architecture is structured around modular kernel subsystems, Capsicum capability enforcement, and enterprise networking primitives:</p>
                 
                 <div class="grid-2" style="margin-top: 1.5rem; margin-bottom: 2.5rem;">
                     <div class="package-card" style="padding: 1.8rem;">
-                        <h3><a href="https://bitedits.github.io/rt/" style="color: var(--accent);">SKYNET RT SPEC</a></h3>
+                        <h3><a href="https://www.freebsd.org" style="color: var(--accent);">FREEBSD SPEC</a></h3>
                         <hr>
                         <ul>
-                            <li><a href="https://bitedits.github.io/rt/#hal"><b>1. HAL &amp; Chip/Board Abstractions</b></a></li>
-                            <li><a href="https://bitedits.github.io/rt/#hal"><b>2. Real-Time Scheduler &amp; POSIX Threads</b></a></li>
-                            <li><a href="https://bitedits.github.io/rt/#hal"><b>3. Virtual File System (VFS, V9FS, ROMFS)</b></a></li>
-                            <li><a href="https://bitedits.github.io/rt/#hal"><b>4. AtomVM &amp; Erlang Microcontroller Runtime</b></a></li>
+                            <li><a href="https://man.freebsd.org/cgi/man.cgi?query=capsicum"><b>1. Capsicum Capability Framework</b></a></li>
+                            <li><a href="https://openzfs.org"><b>2. OpenZFS Storage &amp; GELI Disk Encryption</b></a></li>
+                            <li><a href="https://man.freebsd.org/cgi/man.cgi?query=jail"><b>3. FreeBSD Jails &amp; VIMAGE Virtualization</b></a></li>
+                            <li><a href="https://man.freebsd.org/cgi/man.cgi?query=kqueue"><b>4. Kqueue Event Infrastructure &amp; VirtIO</b></a></li>
                         </ul>
                     </div>
 
                     <div class="package-card" style="padding: 1.8rem;">
-                        <h3><a href="https://bitedits.github.io/rt/" style="color: var(--accent);">RTOS CODE POLICY</a></h3>
+                        <h3><a href="https://www.freebsd.org" style="color: var(--accent);">FREEBSD CODE POLICY</a></h3>
                         <hr>
                         <ul>
-                            <li><a href="https://bitedits.github.io/rt/"><b>ANSI C99 POSIX-1.2008 Compliance</b></a></li>
-                            <li><a href="https://bitedits.github.io/rt/"><b>Compact Footprint (&lt;2.88MB, ~300K LOC)</b></a></li>
-                            <li><a href="https://bitedits.github.io/rt/"><b>Deterministic Real-Time Execution</b></a></li>
-                            <li><a href="https://bitedits.github.io/rt/"><b>Make &amp; Kconfig Build Infrastructure</b></a></li>
+                            <li><a href="https://www.freebsd.org/copyright/"><b>BSD 2-Clause Permissive Licensing</b></a></li>
+                            <li><a href="https://www.freebsd.org"><b>Strict C11 &amp; LLVM/Clang Conformance</b></a></li>
+                            <li><a href="https://man.freebsd.org/cgi/man.cgi?query=style"><b>KNF (Kernel Normal Form) Style Standard</b></a></li>
+                            <li><a href="https://www.freebsd.org/security/"><b>Security Advisories &amp; Audit Pipeline</b></a></li>
                         </ul>
                     </div>
                 </div>
 
                 <div class="plane-header">1. VirtIO &amp; Hypervisor Handoff</div>
-                <p>When running as a System Plane image in Synrc VE OS.1, Skynet RT / NuttX boots via <b>Limine</b>, <b>TianoCore EDK II</b>, or raw <b>seL4 Protection Domains (PDs)</b>. Hardware I/O and console output route directly through VirtIO primitives or serial streams inside isolated capability-managed sandboxes.</p>
+                <p>When running as a System Plane image in Synrc VE OS.1, FreeBSD boots via <b>Limine</b>, <b>TianoCore EDK II</b>, or raw <b>seL4 Protection Domains (PDs)</b>. Display and block devices route through VirtIO-GPU, VirtIO-Block, and VirtIO-Net drivers for high-throughput guest execution.</p>
             </div>
         </section>
     </main>
@@ -210,8 +207,10 @@ make -j
                 <ul>
                     <li><a href="https://hv.synrc.com/system_alpine.html"><b>Alpine:</b> Musl, OpenRC, Landlock</a></li>
                     <li><a href="https://hv.synrc.com/system_netbsd.html"><b>NetBSD:</b> Veriexec, Kauth, NPF</a></li>
+                    <li><a href="system_freebsd.html"><b>FreeBSD:</b> Capsicum, OpenZFS, Jails</a></li>
                     <li><a href="https://hv.synrc.com/system_btron.html"><b>BTRON:</b> μITRON, DP, VOBJ</a></li>
-                    <li><a href="system_nuttx.html"><b>NuttX:</b> Skynet RT, POSIX, HAL</a></li>
+                    <li><a href="https://hv.synrc.com/system_nuttx.html"><b>NuttX:</b> Skynet RT, POSIX, HAL</a></li>
+                    <li><a href="system_lk.html"><b>LK:</b> Little Kernel, BeOS, Zircon</a></li>
                     <li><a href="https://hv.synrc.com/hypervision.html"><b>Unikernels:</b> Erlang &amp; C99</a></li>
                 </ul>
             </div>
