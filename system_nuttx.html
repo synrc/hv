@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Plane (NuttX) — Synrc Virtualization Environment VE OS.1</title>
+    <link rel="stylesheet" href="index.css?v=1">
+    <style>
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+        @media (max-width: 900px) {
+            .grid-2 {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav class="sticky">
+        <div class="nav-container">
+            <a href="index.html" class="logo"><img width="50" style="" src="https://n2o.dev/img/synrc.svg"></a>
+            <button class="nav-toggle" aria-label="Toggle navigation" onclick="document.querySelector('.nav-links').classList.toggle('open'); this.classList.toggle('open');">
+                <span class="hamburger"></span>
+            </button>
+            <ul class="nav-links">
+                <li><a href="https://hv.synrc.com/index.html">Intro</a></li>
+                <li><a href="https://hv.synrc.com/applications.html">Applications</a></li>
+                <li><a href="https://hv.synrc.com/products.html">Products</a></li>
+                <li><a href="https://hv.synrc.com/downloads.html">Downloads</a></li>
+                <li class="dropdown">
+                    <a href="#" class="dropdown-toggle" onclick="event.preventDefault(); this.parentElement.classList.toggle('open');">Planes  <span class="arrow">▾</span></a>
+                    <ul class="dropdown-menu">
+                        <li><a href="https://hv.synrc.com/security.html">Security</a></li>
+                        <li><a href="https://hv.synrc.com/control.html">Control</a></li>
+                        <li><a href="https://hv.synrc.com/web.html">Web</a></li>
+                        <li><a href="https://hv.synrc.com/compute.html">Compute</a></li>
+                        <li><a href="https://hv.synrc.com/service.html">Service</a></li>
+                    </ul>
+                </li>
+                <li class="dropdown active">
+                    <a href="#" class="dropdown-toggle" onclick="event.preventDefault(); this.parentElement.classList.toggle('open');">Systems <span class="arrow">▾</span></a>
+                    <ul class="dropdown-menu">
+                        <li><a href="https://hv.synrc.com/system_alpine.html">Alpine</a></li>
+                        <li><a href="https://hv.synrc.com/system_netbsd.html">NetBSD</a></li>
+                        <li><a href="https://hv.synrc.com/system_btron.html">BTRON</a></li>
+                        <li><a href="system_nuttx.html" class="active">NuttX</a></li>
+                    </ul>
+                </li>
+                <li><a href="https://hv.synrc.com/hypervision.html">HV</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <header>
+        <div class="hero-content">
+            <h1>System Plane (NuttX)</h1>
+            <p class="hero-subtitle">The native real-time POSIX operating system runtime utilizing Skynet RT / Apache NuttX 12.x for microcontrollers and embedded runtimes.</p>
+        </div>
+    </header>
+
+    <main>
+        <section>
+            <h2>NuttX Guest Environment</h2>
+            <div style="max-width:850px;margin:0 auto;text-align:center;">
+                <p>The <b>NuttX System Plane</b> provides a cleanroom, POSIX-compliant ANSI C99 real-time operating system runtime based on <b>Skynet RT</b> (an Apache 2.0 licensed fork of Apache NuttX). Tailored for embedded control, low-latency microcontrollers, AtomVM execution, and Sokhatsky Commander, it features a minimal footprint (~300K lines of code, capped at 2.88MB), a Kconfig/make build system, and support for ARMv7-M, ARMv7-A, ARMv8-M, ARMv8-A, and BCM2711 architectures.</p>
+            </div>
+
+            <div class="grid-2">
+                <div class="package-card">
+                    <h3><a href="https://bitedits.github.io/rt/">SKYNET RT</a> &amp; <a href="https://nuttx.apache.org">NUTTX 12.X</a></h3>
+                    <hr>
+                    <p>Apache 2.0 licensed ANSI C99 POSIX RTOS runtime optimized for high-assurance embedded systems and AtomVM Erlang microcontrollers.</p>
+                    <pre class="code-snippet">
+/* Skynet RT QEMU Execution */
+./tools/configure.sh qemu-armv7a:nsh
+kconfig-mconf Kconfig
+./tools/mkconfig . > include/nuttx/config.h
+make -j
+qemu-system-arm -M virt -device loader,file=nuttx -nographic</pre>
+                </div>
+                
+                <div class="package-card">
+                    <h3><a href="https://bitedits.github.io/rt/#hal">HAL &amp; ARCHITECTURE</a></h3>
+                    <hr>
+                    <p>Hardware Abstraction Layer defining CPU chips and board BSPs for clock counters, GPIO, I2C, SPI, UART, PWM, ADC, and power management.</p>
+                    <pre class="code-snippet">
+/* Raspberry Pi Pico 2 (RP2350) Target */
+./tools/configure.sh raspberrypi-pico-2:usbnsh
+make -j
+picotool uf2 convert nuttx.bin nuttx.uf2 \
+  --family absolute --offset 0x10000000</pre>
+                </div>
+
+                <div class="package-card">
+                    <h3><a href="https://bitedits.github.io/rt/#hal">RTOS KERNEL &amp; VFS</a></h3>
+                    <hr>
+                    <p>Real-time scheduler, POSIX threads, semaphores, message queues, memory manager, ELF/FLAT loader, and Virtual File System (VFS, Plan 9 V9FS, ROMFS, BINFS).</p>
+                    <pre class="code-snippet">
+/* POSIX Application Simulation */
+./tools/configure.sh sim:nsh
+make -j
+./nuttx</pre>
+                </div>
+
+                <div class="package-card">
+                    <h3><a href="https://bitedits.github.io/rt/#hal">HARDWARE BOARDS</a></h3>
+                    <hr>
+                    <p>Curated board primitives inheriting SoC chip drivers with full bootloader, DMA, and peripheral integration.</p>
+                    <pre class="code-snippet">
+/* Supported Boards */
+- CXD56XX: Sony Spresense 6-core MCU
+- PICO2: Raspberry Pi Pico 2 (RP2350)
+- VIRTIO: QEMU VirtIO ARM Virt Target
+- SIM: Native POSIX Host Simulator</pre>
+                </div>
+
+                <div class="product-card">
+                    <h3>Hardware &amp; Profiles</h3>
+                    <hr>
+                    <ul>
+                        <li><a href="https://bitedits.github.io/rt/#hal">PICO 2</a> — Raspberry Pi Pico 2 (RP2350 &amp; RP2040)</li>
+                        <li><a href="https://bitedits.github.io/rt/#hal">CXD5602</a> — Sony Spresense 6-core ARM Cortex-M4F</li>
+                        <li><a href="https://bitedits.github.io/rt/#hal">RK3399</a> — Rockchip Hexa-Core 64-bit SoC</li>
+                        <li><a href="https://bitedits.github.io/rt/#js">SIM &amp; QEMU</a> — POSIX Simulation &amp; ARM Virt Target</li>
+                    </ul>
+                </div>
+
+                <div class="product-card">
+                    <h3>Kernel Subsystems</h3>
+                    <hr>
+                    <ul>
+                        <li><a href="https://bitedits.github.io/rt/#hal">SCHED &amp; TASK</a> — Priority-based POSIX threads &amp; tasks</li>
+                        <li><a href="https://bitedits.github.io/rt/#hal">V9FS &amp; ROMFS</a> — Plan 9 network FS &amp; Flash ROM file system</li>
+                        <li><a href="https://bitedits.github.io/rt/#hal">AtomVM</a> — Erlang VM execution on microcontrollers</li>
+                        <li><a href="https://bitedits.github.io/rt/#hal">LIBC &amp; LIBM</a> — Standard C runtime &amp; math libraries</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <h2>Specification &amp; Architecture</h2>
+            <div class="story-container">
+                <div class="plane-header">0. Skynet RT Specification &amp; Build System</div>
+                <p>Skynet RT provides a menu-driven configuration pipeline (`kconfig-mconf Kconfig`) and POSIX build architecture organized into HAL, Kernel, Drivers, File Systems, and Userland Applications:</p>
+                
+                <div class="grid-2" style="margin-top: 1.5rem; margin-bottom: 2.5rem;">
+                    <div class="package-card" style="padding: 1.8rem;">
+                        <h3><a href="https://bitedits.github.io/rt/" style="color: var(--accent);">SKYNET RT SPEC</a></h3>
+                        <hr>
+                        <ul>
+                            <li><a href="https://bitedits.github.io/rt/#hal"><b>1. HAL &amp; Chip/Board Abstractions</b></a></li>
+                            <li><a href="https://bitedits.github.io/rt/#hal"><b>2. Real-Time Scheduler &amp; POSIX Threads</b></a></li>
+                            <li><a href="https://bitedits.github.io/rt/#hal"><b>3. Virtual File System (VFS, V9FS, ROMFS)</b></a></li>
+                            <li><a href="https://bitedits.github.io/rt/#hal"><b>4. AtomVM &amp; Erlang Microcontroller Runtime</b></a></li>
+                        </ul>
+                    </div>
+
+                    <div class="package-card" style="padding: 1.8rem;">
+                        <h3><a href="https://bitedits.github.io/rt/" style="color: var(--accent);">RTOS CODE POLICY</a></h3>
+                        <hr>
+                        <ul>
+                            <li><a href="https://bitedits.github.io/rt/"><b>ANSI C99 POSIX-1.2008 Compliance</b></a></li>
+                            <li><a href="https://bitedits.github.io/rt/"><b>Compact Footprint (&lt;2.88MB, ~300K LOC)</b></a></li>
+                            <li><a href="https://bitedits.github.io/rt/"><b>Deterministic Real-Time Execution</b></a></li>
+                            <li><a href="https://bitedits.github.io/rt/"><b>Make &amp; Kconfig Build Infrastructure</b></a></li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="plane-header">1. VirtIO &amp; Hypervisor Handoff</div>
+                <p>When running as a System Plane image in Synrc VE OS.1, Skynet RT / NuttX boots via <b>Limine</b>, <b>TianoCore EDK II</b>, or raw <b>seL4 Protection Domains (PDs)</b>. Hardware I/O and console output route directly through VirtIO primitives or serial streams inside isolated capability-managed sandboxes.</p>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="footer-columns">
+            <div>
+                <h4>Synrc VE OS.1</h4>
+                <p>High-Assurance VirtIO Hypervisor</p>
+                <p>Deployment Platform for Unikernels</p>
+                <p>By <a rel="me" href="https://mathstodon.xyz/@5ht">5HT</a> in C99 &amp; Erlang/OTP</p>
+            </div>
+
+            <div>
+                <h4>Planes Architecture</h4>
+                <ul>
+                    <li><b>0. Bedrock:</b> Hypervision (seL4)</li>
+                    <li><b>1. Control:</b> CHIMERA, LAND, NET</li>
+                    <li><b>2. Security:</b> TPM 2.0, CA, AU, CM</li>
+                    <li><b>3. Service:</b> X11, WM, CHAT, MQTT</li>
+                    <li><b>4. Applications:</b> BPE, KVS, N2O</li>
+                    <li><b>5. Products:</b> Enterprise Suites</li>
+                </ul>
+            </div>
+
+            <div>
+                <h4>System Images</h4>
+                <ul>
+                    <li><a href="https://hv.synrc.com/system_alpine.html"><b>Alpine:</b> Musl, OpenRC, Landlock</a></li>
+                    <li><a href="https://hv.synrc.com/system_netbsd.html"><b>NetBSD:</b> Veriexec, Kauth, NPF</a></li>
+                    <li><a href="https://hv.synrc.com/system_btron.html"><b>BTRON:</b> μITRON, DP, VOBJ</a></li>
+                    <li><a href="system_nuttx.html"><b>NuttX:</b> Skynet RT, POSIX, HAL</a></li>
+                    <li><a href="https://hv.synrc.com/hypervision.html"><b>Unikernels:</b> Erlang &amp; C99</a></li>
+                </ul>
+            </div>
+
+            <div>
+                <h4>Whitepapers</h4>
+                <ul>
+                    <li><a href="https://os.synrc.com/os-hyper.pdf">2026-08-19 VirtIO Xen ESXi</a></li>
+                    <li><a href="https://os.synrc.com/os.pdf">2026-07-19 Guest Alpine</a></li>
+                    <li><a href="https://os.synrc.com/os-bsd.pdf">2026-07-19 Guest NetBSD</a></li>
+                    <li><a href="https://os.synrc.com/os.txt">2026-07-29 NIST 53 Architecture</a></li>
+                    <li><a href="https://hv.synrc.com/hv.pdf">2026-08-10 OTP 20 seL4</a></li>
+                    <li><a href="https://hv.synrc.com/hv-smp.pdf">2026-08-13 OTP 30 4-Core</a></li>
+                    <li><a href="https://hv.synrc.com/hv-bc.pdf">2026-08-13 Byte-code VMs</a></li>
+                    <li><a href="https://hv.synrc.com/hv-infosec.pdf">2026-08-14 Infosec Architecture</a></li>
+                    <li><a href="https://hv.synrc.com/hv-crypto.pdf">2026-08-19 LibreSSL Crypto</a></li>
+                </ul>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>
