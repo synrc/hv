@@ -135,6 +135,7 @@ All unikernels share the same VirtIO transport and capability model; only the ap
 
 \subsection{Declarations (OS and Unikernels)}
 
+\subsubsection{BEAM Unikernel VM}
 A typical Terraform declaration for a high-assurance BEAM unikernel on Proxmox VE looks as follows:
 
 \begin{verbatim}
@@ -164,7 +165,6 @@ resource "proxmox_virtual_environment_vm" "beam_unikernel" {
     model  = "virtio"
   }
   initialization {
-    # cloud-init or direct kernel cmdline for seL4
     user_account {
       username = "synrc"
       keys     = [file(var.ssh_public_key)]
@@ -173,9 +173,120 @@ resource "proxmox_virtual_environment_vm" "beam_unikernel" {
 }
 \end{verbatim}
 
-LXC-based micro-services are declared with the corresponding container resource and an Alpine ostemplate previously exported by Packer. Kubernetes nodes are declared identically, differing only in the template identifier and subsequent bootstrap provisioners.
+\newpage
+\subsubsection{NetBSD MicroVM}
+For lightweight, low-footprint System-plane services or rump-kernel guests, a NetBSD MicroVM is declared with minimal CPU and memory allocations:
 
-Environment-specific values (template IDs, network CIDRs, resource sizes) are supplied via \texttt{tfvars} files under \texttt{environments/}, keeping the modules themselves pure and reusable.
+\begin{verbatim}
+resource "proxmox_virtual_environment_vm" "netbsd_microvm" {
+  name      = "hv-netbsd-microvm-01"
+  node_name = "pve01"
+  vm_id     = 9200
+  clone {
+    vm_id = var.netbsd_microvm_template_id
+    full  = true
+  }
+  cpu {
+    cores = 1
+    type  = "host"
+  }
+  memory {
+    dedicated = 512
+  }
+  disk {
+    datastore_id = "local-lvm"
+    interface    = "virtio0"
+    size         = 4
+    file_format  = "qcow2"
+  }
+  network_device {
+    bridge = "vmbr0"
+    model  = "virtio"
+  }
+}
+\end{verbatim}
+
+\newpage
+\subsubsection{Full NetBSD Guest VM}
+When a full NetBSD userland guest or extended POSIX environment is required:
+
+\begin{verbatim}
+resource "proxmox_virtual_environment_vm" "netbsd_full" {
+  name      = "hv-netbsd-full-01"
+  node_name = "pve01"
+  vm_id     = 9210
+  clone {
+    vm_id = var.netbsd_full_template_id
+    full  = true
+  }
+  cpu {
+    cores = 2
+    type  = "host"
+  }
+  memory {
+    dedicated = 2048
+  }
+  disk {
+    datastore_id = "local-lvm"
+    interface    = "virtio0"
+    size         = 20
+    file_format  = "qcow2"
+  }
+  network_device {
+    bridge = "vmbr0"
+    model  = "virtio"
+  }
+}
+\end{verbatim}
+
+\newpage
+\subsubsection{Alpine Linux LXC Micro-service}
+LXC-based Erlang micro-services (such as LDAP, CA, VPN, KVS) are declared using an Alpine ostemplate built by Packer:
+
+\begin{verbatim}
+resource "proxmox_virtual_environment_container" "alpine_lxc" {
+  node_name    = "pve01"
+  vm_id        = 9300
+  unprivileged = true
+
+  initialization {
+    hostname = "synrc-ldap"
+    ip_config {
+      ipv4 {
+        address = "192.168.1.101/24"
+        gateway = "192.168.1.1"
+      }
+    }
+    user_account {
+      keys = [file(var.ssh_public_key)]
+    }
+  }
+
+  operating_system {
+    template_file_id = "local:vztmpl/synrc-ldap-alpine.tar.zst"
+    type             = "alpine"
+  }
+
+  cpu {
+    cores = 1
+  }
+  memory {
+    dedicated = 512
+  }
+  disk {
+    datastore_id = "local-lvm"
+    size         = 8
+  }
+  network_interface {
+    name   = "eth0"
+    bridge = "vmbr0"
+  }
+}
+\end{verbatim}
+
+Environment-specific values (template IDs, network CIDRs, resource sizes) are supplied via \texttt{tfvars} files under \texttt{environments/}, keeping the modules pure and reusable.
+
+\newpage
 
 %==============================================================================
 \section{Conclusion}
