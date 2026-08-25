@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Language Plane (CLR)</title>
+    <link rel="stylesheet" href="index.css?v=6">
+    <style>
+        .grid-2 {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+        .grid-2 > * {
+            min-width: 0;
+            max-width: 100%;
+        }
+        @media (max-width: 900px) {
+            .grid-2 {
+                grid-template-columns: minmax(0, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav class="sticky">
+        <div class="nav-container">
+            <a href="index.html" class="logo"><img width="50" style="" src="https://n2o.dev/img/synrc.svg"></a>
+            <button class="nav-toggle" aria-label="Toggle navigation" onclick="document.querySelector('.nav-links').classList.toggle('open'); this.classList.toggle('open');">
+                <span class="hamburger"></span>
+            </button>
+            <ul class="nav-links">
+                <li><a href="index.html">Intro</a></li>
+                <li><a href="applications.html">Applications</a></li>
+                <li><a href="products.html">Products</a></li>
+                <li><a href="downloads.html">Downloads</a></li>
+                <li class="dropdown">
+                    <a href="#" class="dropdown-toggle" onclick="event.preventDefault(); this.parentElement.classList.toggle('open');">Planes <span class="arrow">▾</span></a>
+                    <ul class="dropdown-menu">
+                        <li><a href="security.html">Security</a></li>
+                        <li><a href="control.html">Control</a></li>
+                        <li><a href="web.html">Web</a></li>
+                        <li><a href="compute.html">Compute</a></li>
+                        <li><a href="service.html">Service</a></li>
+                    </ul>
+                </li>
+                <li class="dropdown active">
+                    <a href="#" class="dropdown-toggle" onclick="event.preventDefault(); this.parentElement.classList.toggle('open');">Languages <span class="arrow">▾</span></a>
+                    <ul class="dropdown-menu">
+                        <li><a href="language_beam.html">BEAM Elixir/Erlang</a></li>
+                        <li><a href="language_clr.html" class="active">CLR F#/C#</a></li>
+                        <li><a href="language_jvm.html">JVM Scala/Java</a></li>
+                    </ul>
+                </li>
+                <li class="dropdown">
+                    <a href="#" class="dropdown-toggle" onclick="event.preventDefault(); this.parentElement.classList.toggle('open');">Systems <span class="arrow">▾</span></a>
+                    <ul class="dropdown-menu">
+                        <li><a href="system_alpine.html">Alpine</a></li>
+                        <li><a href="system_netbsd.html">NetBSD</a></li>
+                        <li><a href="system_freebsd.html">FreeBSD</a></li>
+                        <li><a href="system_btron.html">BTRON</a></li>
+                        <li><a href="system_nuttx.html">NuttX</a></li>
+                        <li><a href="system_lk.html">LK</a></li>
+                    </ul>
+                </li>
+                <li><a href="hypervision.html">HV</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <header>
+        <div class="hero-content">
+            <h1>Language Plane (CLR)</h1>
+            <p class="hero-subtitle">The common language runtime, managed execution, and garbage collection engine running F# and C# for Synrc Virtualization Environment VE OS.1.</p>
+        </div>
+    </header>
+
+    <main>
+        <section>
+            <h2>CLR Guest Environment</h2>
+            <div style="max-width:850px;margin:0 auto;text-align:center;">
+                <p>The <b>CLR Language Plane</b> offers a secure execution environment for F# and C# applications. By deploying the .NET CoreCLR or Mono runtimes inside dedicated, static seL4 Protection Domains, we run high-performance managed applications directly on top of the <b>Synrc-CLR</b> syscall translation engine with minimal platform dependencies.</p>
+            </div>
+
+            <div class="grid-2">
+                <div class="package-card">
+                    <h3><a href="https://github.com/dotnet/runtime">CORECLR</a> &amp; <a href="https://github.com/dotnet/runtime">MONO RUNTIMES</a></h3>
+                    <hr>
+                    <p>The CLR runtime is customized to compile against musl libc and run inside a single address-space protection domain. This eliminates the standard overhead of multi-process OS configurations and shrinks the TCB.</p>
+                    <pre class="code-snippet">
+/* OS.1 CLR Bootstrap */
+int main(int argc, char **argv) {
+    sel4_init();
+    void *domain = mono_jit_init("os1_app");
+    mono_domain_assembly_open(domain, "app.dll");
+    mono_jit_exec(domain, assembly, argc, argv);
+}</pre>
+                </div>
+                
+                <div class="package-card">
+                    <h3><a href="https://github.com/synrc/hv">SYNRC-CLR SYSCALLS</a></h3>
+                    <hr>
+                    <p>A lightweight translation layer provides standard POSIX syscalls for thread creation, memory allocation, and synchronization, ensuring the CLR managed heap runs cleanly without raw physical device control.</p>
+                    <pre class="code-snippet">
+/* CLR Thread Creation Mapping */
+int clr_create_thread(void *entry, void *arg) {
+    /* Mapped to static seL4 thread spawn */
+    return sys_clone(entry, arg, CLONE_VM|CLONE_FS|CLONE_FILES);
+}</pre>
+                </div>
+
+                <div class="package-card">
+                    <h3><a href="https://github.com/synrc/hv">sDDF MANAGED I/O</a></h3>
+                    <hr>
+                    <p>Standard .NET network streams (Socket, TcpClient) and file handles are routed directly into sDDF (seL4 Device Driver Framework) shared-memory channels, bypassing the Linux virtual filesystem layer.</p>
+                    <pre class="code-snippet">
+/* C# sDDF Socket Wrapper */
+public class SddfSocket {
+    public void Send(byte[] buffer) {
+        SddfRing.Enqueue(buffer, buffer.Length);
+        SeL4.Notify(NicChannel);
+    }
+}</pre>
+                </div>
+
+                <div class="package-card">
+                    <h3><a href="https://github.com/dotnet/runtime">CLR AOT &amp; JIT SECURITY</a></h3>
+                    <hr>
+                    <p>To prevent dynamic execution attacks, OS.1 supports Ahead-Of-Time (AOT) compilation, compiling C# and F# directly to static binary images. This removes JIT-compilation requirements and enforces compile-time verification.</p>
+                    <pre class="code-snippet">
+# C# Ahead-of-Time compilation
+dotnet publish -r linux-musl-x64 -c Release \
+               /p:PublishAot=true \
+               /p:StaticLinkage=true</pre>
+                </div>
+
+                <div class="product-card">
+                    <h3>CIL Bytecode Invariants</h3>
+                    <hr>
+                    <ul>
+                        <li><b>Intermediate Representation</b> — Common Intermediate Language (CIL) enforces stack evaluation checking, protecting against low-level instruction tampering.</li>
+                        <li><b>Metadata Safety</b> — Type descriptions, member signatures, and assembly boundaries are statically parsed, eliminating runtime structure exploits.</li>
+                        <li><b>Garbage Collection</b> — Automated managed heap management completely prevents heap allocation leaks and pointer reuse bugs.</li>
+                        <li><b>Control-Flow Integrity</b> — Verified CIL instruction streams exclude the unaligned, high-density machine codes targeted by Return-Oriented Programming (ROP).</li>
+                    </ul>
+                </div>
+
+                <div class="product-card">
+                    <h3>Sandboxing &amp; Resource Controls</h3>
+                    <hr>
+                    <ul>
+                        <li><b>P/Invoke Confinement</b> — Platform Invoke (P/Invoke) native calls are strictly whitelisted and isolated, blocking escape routes from managed code.</li>
+                        <li><b>Microkit Topologies</b> — All CLR thread budgets, memory blocks, and network allocations are static, declared at image-build time.</li>
+                        <li><b>Temporal Allocation</b> — MCS scheduling budgets confine garbage collection pauses, preserving real-time constraints for critical sibling domains.</li>
+                        <li><b>Metrics Log Ring</b> — Runtime metrics are piped over unidirectional seL4 channels to the Monitor PD for NIST control validation.</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <h2>Specification &amp; Architecture</h2>
+            <div class="story-container">
+                <div class="plane-header">0. Managed Code Sandboxing</div>
+                <p>The CLR executes application assemblies via intermediate CIL bytecode, acting as a highly secure, type-safe sandbox. The bytecode verifier validates the type safety and memory boundaries of every instruction before translation, eliminating raw pointer access and buffer overflows. Stack-smashing and code injection vectors are shut down, establishing a secure base for higher-level application logic.</p>
+                
+                <div class="plane-header">1. Ahead-Of-Time Security Integration</div>
+                <p>By compiling assemblies Ahead-Of-Time (AOT) to native binaries, OS.1 entirely removes the need for dynamic JIT compilation. This eliminates the necessity of having writable and executable memory regions at runtime (enforcing W^X strictly), reduces the overall code footprint, and blocks runtime code generation attacks while speeding up boot times and reducing memory consumption.</p>
+
+                <div class="plane-header">2. seL4 Spatial Isolation</div>
+                <p>Under the seL4 microkernel and the Microkit framework, the CLR Protection Domain runs in a isolated physical memory space. P/Invoke native invocations are confined to pre-audited boundaries, and physical device drivers are sequestered inside distinct Alpine or native driver domains. Interactions between the application and the environment occur strictly via static, capability-mediated sDDF shared-memory rings.</p>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="footer-columns">
+            <div>
+                <h4>Synrc Virtualization Environment</h4>
+                <p>OS.1 Hypervisor written in C, Erlang/OTP by <a rel="me" href="https://mathstodon.xyz/@5ht">5HT</a>.</p>
+            </div>
+            <div>
+                <h4>Resources</h4>
+                <ul>
+                    <li><a href="https://os.synrc.com/os-hyper.pdf">SYNRC HYPERVISOR OS.1: VIRTIO XEN EXSI</a></li>
+                    <li><a href="https://os.synrc.com/os.txt">OS.1 Architecture</a></li>
+                    <li><a href="https://hv.synrc.com/hv.pdf">SYNRC HYPERVISOR: for OTP 20 Unicore seL4</a></li>
+                    <li><a href="https://hv.synrc.com/hv-smp.pdf">SYNRC HYPERVISOR: for OTP 30 4-Core seL4</a></li>
+                </ul>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>

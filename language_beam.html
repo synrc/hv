@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Language Plane (BEAM)</title>
+    <link rel="stylesheet" href="index.css?v=6">
+    <style>
+        .grid-2 {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+        .grid-2 > * {
+            min-width: 0;
+            max-width: 100%;
+        }
+        @media (max-width: 900px) {
+            .grid-2 {
+                grid-template-columns: minmax(0, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav class="sticky">
+        <div class="nav-container">
+            <a href="index.html" class="logo"><img width="50" style="" src="https://n2o.dev/img/synrc.svg"></a>
+            <button class="nav-toggle" aria-label="Toggle navigation" onclick="document.querySelector('.nav-links').classList.toggle('open'); this.classList.toggle('open');">
+                <span class="hamburger"></span>
+            </button>
+            <ul class="nav-links">
+                <li><a href="index.html">Intro</a></li>
+                <li><a href="applications.html">Applications</a></li>
+                <li><a href="products.html">Products</a></li>
+                <li><a href="downloads.html">Downloads</a></li>
+                <li class="dropdown">
+                    <a href="#" class="dropdown-toggle" onclick="event.preventDefault(); this.parentElement.classList.toggle('open');">Planes <span class="arrow">▾</span></a>
+                    <ul class="dropdown-menu">
+                        <li><a href="security.html">Security</a></li>
+                        <li><a href="control.html">Control</a></li>
+                        <li><a href="web.html">Web</a></li>
+                        <li><a href="compute.html">Compute</a></li>
+                        <li><a href="service.html">Service</a></li>
+                    </ul>
+                </li>
+                <li class="dropdown active">
+                    <a href="#" class="dropdown-toggle" onclick="event.preventDefault(); this.parentElement.classList.toggle('open');">Languages <span class="arrow">▾</span></a>
+                    <ul class="dropdown-menu">
+                        <li><a href="language_beam.html" class="active">BEAM Elixir/Erlang</a></li>
+                        <li><a href="language_clr.html">CLR F#/C#</a></li>
+                        <li><a href="language_jvm.html">JVM Scala/Java</a></li>
+                    </ul>
+                </li>
+                <li class="dropdown">
+                    <a href="#" class="dropdown-toggle" onclick="event.preventDefault(); this.parentElement.classList.toggle('open');">Systems <span class="arrow">▾</span></a>
+                    <ul class="dropdown-menu">
+                        <li><a href="system_alpine.html">Alpine</a></li>
+                        <li><a href="system_netbsd.html">NetBSD</a></li>
+                        <li><a href="system_freebsd.html">FreeBSD</a></li>
+                        <li><a href="system_btron.html">BTRON</a></li>
+                        <li><a href="system_nuttx.html">NuttX</a></li>
+                        <li><a href="system_lk.html">LK</a></li>
+                    </ul>
+                </li>
+                <li><a href="hypervision.html">HV</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <header>
+        <div class="hero-content">
+            <h1>Language Plane (BEAM)</h1>
+            <p class="hero-subtitle">The native virtual machine, actor-model concurrency, and hot-code reloading engine for Synrc Virtualization Environment VE OS.1.</p>
+        </div>
+    </header>
+
+    <main>
+        <section>
+            <h2>BEAM Guest Environment</h2>
+            <div style="max-width:850px;margin:0 auto;text-align:center;">
+                <p>The <b>BEAM Language Plane</b> hosts unmodified Erlang/OTP applications inside minimal, isolated seL4 Protection Domains. By stripping away conventional operating system layers, we run the BEAM runtime directly on top of the <b>Synrc</b> system-call translator, creating high-assurance, single-purpose unikernels with a micro-sized Trusted Computing Base (TCB).</p>
+            </div>
+
+            <div class="grid-2">
+                <div class="package-card">
+                    <h3><a href="https://github.com/synrc/hv">ERLANG/OTP 20</a> &amp; <a href="https://github.com/synrc/hv">SYNRC CORE</a></h3>
+                    <hr>
+                    <p>The single-core OTP 20.3.8.26 build removes SMP scheduler synchronization, locks, JIT dependencies, and atomic memory operations. This yields a frozen, highly audit-ready VM footprint linked against musl libc.</p>
+                    <pre class="code-snippet">
+/* Erlang/OTP 20 Single-Core Emulator */
+int main(int argc, char **argv) {
+    synrc_init_sel4();
+    beam_start_single_core();
+    return 0;
+}</pre>
+                </div>
+                
+                <div class="package-card">
+                    <h3><a href="https://github.com/synrc/hv">SYNRC SYSCALL TRAP</a></h3>
+                    <hr>
+                    <p>Synrc intercepts standard Linux system calls made by the musl-linked BEAM, providing a minimal trap surface (approx. 50 calls) for memory mapping, futex synchronization, time, and an in-memory VFS.</p>
+                    <pre class="code-snippet">
+/* Minimal Syscall Translation */
+long syscall_trap(long num, long a1, long a2) {
+    switch (num) {
+        case SYS_mmap:    return do_mmap(a1, a2);
+        case SYS_futex:   return do_futex(a1, a2);
+        case SYS_clock:   return do_clock();
+    }
+    return -ENOSYS;
+}</pre>
+                </div>
+
+                <div class="package-card">
+                    <h3><a href="https://github.com/synrc/hv">CAPABILITY-MEDIATED I/O</a></h3>
+                    <hr>
+                    <p>The BEAM protection domain contains no device driver registers. All network and storage interactions are offloaded to sDDF (seL4 Device Driver Framework) shared-memory rings and notifications.</p>
+                    <pre class="code-snippet">
+/* sDDF Ring-Buffer I/O Handoff */
+sddf_ring_t *tx_ring = get_tx_ring();
+sddf_enqueue(tx_ring, packet_buf, len);
+sel4_notify(nic_pd_cap);</pre>
+                </div>
+
+                <div class="package-card">
+                    <h3><a href="https://github.com/synrc/hv">SMP MULTI-CORE TARGETS</a></h3>
+                    <hr>
+                    <p>For workloads requiring multi-core scaling, the SMP tree introduces a fixed worker thread pool (workers 6–15) mapped directly to seL4 execution contexts, utilizing work-stealing and cross-core notifications.</p>
+                    <pre class="code-snippet">
+/* Static SMP Worker Loop */
+void *worker_run(void *arg) {
+    worker_env_t *env = (worker_env_t *)arg;
+    while (1) {
+        beam_sched_run(env->queue);
+        sel4_yield();
+    }
+}</pre>
+                </div>
+
+                <div class="product-card">
+                    <h3>Bytecode Safety Properties</h3>
+                    <hr>
+                    <ul>
+                        <li><b>Memory Safety</b> — No raw pointer arithmetic; all accesses are verified by the BEAM runtime.</li>
+                        <li><b>Type Safety</b> — Strict runtime type validation preventing object injection and type confusion.</li>
+                        <li><b>Control-Flow Integrity</b> — ROP, JOP, and COP mitigation through software-managed call stacks and the lack of dense native instructions.</li>
+                        <li><b>Resource Preemption</b> — Reduction counting prevents individual actor processes from monopolizing scheduler execution.</li>
+                    </ul>
+                </div>
+
+                <div class="product-card">
+                    <h3>NIST SP 800-53 Mapping</h3>
+                    <hr>
+                    <ul>
+                        <li><b>AC-3 / AC-6 (Access Control)</b> — Enforced by seL4 capability matrices and isolated static memory regions.</li>
+                        <li><b>SC-7 (Boundary Protection)</b> — Strict spatial and temporal separation between the BEAM PD, VMM, and driver domains.</li>
+                        <li><b>CM-2 / CM-7 (Config Management)</b> — System topology, thread configurations, and device bounds are fixed at build time.</li>
+                        <li><b>AU-12 (Audit Event Generation)</b> — Audit metrics are pushed directly to the Monitor PD over unidirectional channels.</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <h2>Specification &amp; Architecture</h2>
+            <div class="story-container">
+                <div class="plane-header">0. Bytecode Virtualization Bedrock</div>
+                <p>By executing intermediate bytecode instructions rather than native machine codes, the BEAM runtime acts as a high-assurance sandbox. This virtualization layer blocks standard stack-smashing, use-after-free, and return-oriented programming (ROP) exploits. Because the virtual machine call stack is decoupled from the native physical registers, attacker-controlled data streams cannot hijack the instruction pointer.</p>
+                
+                <div class="plane-header">1. The Synrc Thin Host</div>
+                <p>The Synrc layer sits between the seL4 microkernel and the BEAM runtime, presenting a bare-minimum POSIX interface. Rather than running a full general-purpose operating system kernel, Synrc handles only the syscalls needed for memory management (mmap/mprotect), synchronization (futex), and threads (clone). It lacks raw hardware access, translating all virtual socket and file operations directly into sDDF shared-memory rings.</p>
+
+                <div class="plane-header">2. Static Protection Domains</div>
+                <p>Under the Microkit framework, the system is constructed statically at compile time. The memory mappings, IRQ channels, scheduling priorities (using the Mixed-Criticality Scheduling model), and core affinities are immutable. The BEAM domain runs alongside separate VMM, Console, Monitor, and Storage protection domains, ensuring that a vulnerability in the application runtime cannot compromise the hardware or sibling domains.</p>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="footer-columns">
+            <div>
+                <h4>Synrc Virtualization Environment</h4>
+                <p>OS.1 Hypervisor written in C, Erlang/OTP by <a rel="me" href="https://mathstodon.xyz/@5ht">5HT</a>.</p>
+            </div>
+            <div>
+                <h4>Resources</h4>
+                <ul>
+                    <li><a href="https://os.synrc.com/os-hyper.pdf">SYNRC HYPERVISOR OS.1: VIRTIO XEN EXSI</a></li>
+                    <li><a href="https://os.synrc.com/os.txt">OS.1 Architecture</a></li>
+                    <li><a href="https://hv.synrc.com/hv.pdf">SYNRC HYPERVISOR: for OTP 20 Unicore seL4</a></li>
+                    <li><a href="https://hv.synrc.com/hv-smp.pdf">SYNRC HYPERVISOR: for OTP 30 4-Core seL4</a></li>
+                </ul>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Language Plane (JVM)</title>
+    <link rel="stylesheet" href="index.css?v=6">
+    <style>
+        .grid-2 {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+        .grid-2 > * {
+            min-width: 0;
+            max-width: 100%;
+        }
+        @media (max-width: 900px) {
+            .grid-2 {
+                grid-template-columns: minmax(0, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav class="sticky">
+        <div class="nav-container">
+            <a href="index.html" class="logo"><img width="50" style="" src="https://n2o.dev/img/synrc.svg"></a>
+            <button class="nav-toggle" aria-label="Toggle navigation" onclick="document.querySelector('.nav-links').classList.toggle('open'); this.classList.toggle('open');">
+                <span class="hamburger"></span>
+            </button>
+            <ul class="nav-links">
+                <li><a href="index.html">Intro</a></li>
+                <li><a href="applications.html">Applications</a></li>
+                <li><a href="products.html">Products</a></li>
+                <li><a href="downloads.html">Downloads</a></li>
+                <li class="dropdown">
+                    <a href="#" class="dropdown-toggle" onclick="event.preventDefault(); this.parentElement.classList.toggle('open');">Planes <span class="arrow">▾</span></a>
+                    <ul class="dropdown-menu">
+                        <li><a href="security.html">Security</a></li>
+                        <li><a href="control.html">Control</a></li>
+                        <li><a href="web.html">Web</a></li>
+                        <li><a href="compute.html">Compute</a></li>
+                        <li><a href="service.html">Service</a></li>
+                    </ul>
+                </li>
+                <li class="dropdown active">
+                    <a href="#" class="dropdown-toggle" onclick="event.preventDefault(); this.parentElement.classList.toggle('open');">Languages <span class="arrow">▾</span></a>
+                    <ul class="dropdown-menu">
+                        <li><a href="language_beam.html">BEAM Elixir/Erlang</a></li>
+                        <li><a href="language_clr.html">CLR F#/C#</a></li>
+                        <li><a href="language_jvm.html" class="active">JVM Scala/Java</a></li>
+                    </ul>
+                </li>
+                <li class="dropdown">
+                    <a href="#" class="dropdown-toggle" onclick="event.preventDefault(); this.parentElement.classList.toggle('open');">Systems <span class="arrow">▾</span></a>
+                    <ul class="dropdown-menu">
+                        <li><a href="system_alpine.html">Alpine</a></li>
+                        <li><a href="system_netbsd.html">NetBSD</a></li>
+                        <li><a href="system_freebsd.html">FreeBSD</a></li>
+                        <li><a href="system_btron.html">BTRON</a></li>
+                        <li><a href="system_nuttx.html">NuttX</a></li>
+                        <li><a href="system_lk.html">LK</a></li>
+                    </ul>
+                </li>
+                <li><a href="hypervision.html">HV</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <header>
+        <div class="hero-content">
+            <h1>Language Plane (JVM)</h1>
+            <p class="hero-subtitle">The virtual machine, class-loader verification, and automated garbage collection engine running Java and Scala for Synrc Virtualization Environment VE OS.1.</p>
+        </div>
+    </header>
+
+    <main>
+        <section>
+            <h2>JVM Guest Environment</h2>
+            <div style="max-width:850px;margin:0 auto;text-align:center;">
+                <p>The <b>JVM Language Plane</b> provides a high-assurance hosting environment for Scala, Java, and other class-file runtimes. Drawing from the single-purpose <b>OSv unikernel</b> architecture, we discard the generic operating system layers, wrapping the OpenJDK runtime inside a dedicated, statically configured seL4 Protection Domain with a direct sDDF I/O ring backend.</p>
+            </div>
+
+            <div class="grid-2">
+                <div class="package-card">
+                    <h3><a href="https://github.com/cloudius-systems/osv-apps">OSv MODEL</a> &amp; <a href="https://openjdk.org">OPENJDK JVM</a></h3>
+                    <hr>
+                    <p>Unlike traditional OS hosting, the OSv model packages the JVM as a shared library (libjvm.so) directly sharing a single address space with the kernel. On OS.1, this is adapted by compiling OpenJDK directly against a minimal, musl-linked seL4 environment.</p>
+                    <pre class="code-snippet">
+/* OS.1 JVM Bootstrap */
+int main(int argc, char **argv) {
+    sel4_vmm_init();
+    void *libjvm = dlopen("libjvm.so", RTLD_NOW);
+    jvm_entry_t start = dlsym(libjvm, "JNI_CreateJavaVM");
+    start(&amp;jvm, &amp;env, &amp;args);
+}</pre>
+                </div>
+                
+                <div class="package-card">
+                    <h3><a href="https://github.com/synrc/hv">JVM MINIMAL HOST</a></h3>
+                    <hr>
+                    <p>A purpose-built, JVM-specific host layer translates the minimal POSIX-compatible system calls (mmap, futex, clone, clock) required by the JVM runtime, ensuring that the host never runs arbitrary driver register actions.</p>
+                    <pre class="code-snippet">
+/* HotSpot Heap Mapping */
+void *allocate_java_heap(size_t size) {
+    /* Direct capability-checked page allocation */
+    return sys_mmap(NULL, size, PROT_READ|PROT_WRITE, 
+                    MAP_ANONYMOUS|MAP_PRIVATE, -1, 0);
+}</pre>
+                </div>
+
+                <div class="package-card">
+                    <h3><a href="https://github.com/synrc/hv">sDDF SOCKETS &amp; FILES</a></h3>
+                    <hr>
+                    <p>All virtual file systems and socket connections inside the JVM run-loop are converted into sDDF (seL4 Device Driver Framework) ring-buffer operations, offloading packet and block processing to native helper PDs.</p>
+                    <pre class="code-snippet">
+/* JVM Socket Read over sDDF Rings */
+int jvm_sddf_recv(int fd, void *buf, size_t len) {
+    sddf_ring_t *rx_ring = get_rx_ring(fd);
+    while (sddf_is_empty(rx_ring)) {
+        sel4_wait(rx_ring->channel);
+    }
+    return sddf_dequeue(rx_ring, buf, len);
+}</pre>
+                </div>
+
+                <div class="package-card">
+                    <h3><a href="https://openjdk.org">HOTSPOT JIT CONTAINMENT</a></h3>
+                    <hr>
+                    <p>To support runtime optimization safely, the HotSpot JIT code cache enforces strict W^X (Write XOR Execute) memory policies via seL4 stage-2 page tables, preventing run-time compilation regions from becoming exploit targets.</p>
+                    <pre class="code-snippet">
+/* seL4 W^X Transition for JIT Code */
+void transition_code_cache(void *addr, size_t size, int mode) {
+    if (mode == CACHE_WRITE) {
+        seL4_PageTable_MapProtect(addr, PROT_READ|PROT_WRITE);
+    } else {
+        seL4_PageTable_MapProtect(addr, PROT_READ|PROT_EXEC);
+    }
+}</pre>
+                </div>
+
+                <div class="product-card">
+                    <h3>Bytecode Safety Properties</h3>
+                    <hr>
+                    <ul>
+                        <li><b>Verifiable Intermediate Code</b> — The JVM bytecode verifier checks type bounds, array limits, and operand stack states before execution.</li>
+                        <li><b>Stack Isolation</b> — The JVM managed stack is independent of the processor hardware stack, eliminating return address control hijacking.</li>
+                        <li><b>Memory Safety</b> — Automated garbage collection prevents use-after-free, double-free, and dangling pointer vulnerabilities.</li>
+                        <li><b>ROP Mitigation</b> — Absence of dense, unaligned native instruction patterns makes ROP/JOP gadget chaining virtually impossible.</li>
+                    </ul>
+                </div>
+
+                <div class="product-card">
+                    <h3>Security Boundary Confinement</h3>
+                    <hr>
+                    <ul>
+                        <li><b>JNI Confinement</b> — Java Native Interface (JNI) extensions are confined inside isolated memory spaces, requiring explicit capability authorization.</li>
+                        <li><b>Static PD Topologies</b> — Thread counts, memory limits, and GC threads are declared statically at image build time under seL4 Microkit.</li>
+                        <li><b>MCS Budgeting</b> — GC loops and user request handling are bound to fixed scheduling budgets to prevent CPU starvation.</li>
+                        <li><b>Audit Pipeline</b> — Audit events are pushed through unidirectional rings to the Monitor PD for NIST AU control validation.</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <h2>Specification &amp; Architecture</h2>
+            <div class="story-container">
+                <div class="plane-header">0. Bytecode Virtualization Safety</div>
+                <p>By compiling languages like Scala and Java to class-file bytecode, JVM applications run within a strictly enforced abstract machine sandbox. This architecture ensures memory safety and type safety. Buffer overflows and pointer corruption—the common precursors to system exploits—are handled natively by runtime bounds checks, while the bytecode verifier rejects corrupt control-flow sequences before execution.</p>
+                
+                <div class="plane-header">1. OSv Single Address Space Integration</div>
+                <p>Drawing inspiration from the OSv unikernel, our JVM plane eliminates the overhead of multi-process scheduling and kernel-to-userland context switching. The JVM and the Synrc minimal host operate in a single, high-performance address space. Because the virtual machine is the sole execution target within the protection domain, memory overhead is drastically reduced, enabling rapid boot times and high container density.</p>
+
+                <div class="plane-header">2. seL4 Hardened Sandboxing</div>
+                <p>Under the seL4 microkernel, the JVM protection domain is bounded by static capability matrices. JNI native escapes are mitigated by running native extensions in separate, lower-privilege protection domains. I/O is offloaded via sDDF rings to driver domains, ensuring that any vulnerability within the application layer is spatially confined and cannot compromise the underlying platform console, storage, or network registers.</p>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="footer-columns">
+            <div>
+                <h4>Synrc Virtualization Environment</h4>
+                <p>OS.1 Hypervisor written in C, Erlang/OTP by <a rel="me" href="https://mathstodon.xyz/@5ht">5HT</a>.</p>
+            </div>
+            <div>
+                <h4>Resources</h4>
+                <ul>
+                    <li><a href="https://os.synrc.com/os-hyper.pdf">SYNRC HYPERVISOR OS.1: VIRTIO XEN EXSI</a></li>
+                    <li><a href="https://os.synrc.com/os.txt">OS.1 Architecture</a></li>
+                    <li><a href="https://hv.synrc.com/hv.pdf">SYNRC HYPERVISOR: for OTP 20 Unicore seL4</a></li>
+                    <li><a href="https://hv.synrc.com/hv-smp.pdf">SYNRC HYPERVISOR: for OTP 30 4-Core seL4</a></li>
+                </ul>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>
