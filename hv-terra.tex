@@ -1,0 +1,211 @@
+\documentclass{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage{hyperref}
+\usepackage{booktabs}
+\usepackage{xcolor}
+\usepackage{graphicx}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage{fancyhdr}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=blue!50!black,
+  urlcolor=blue!70!black,
+  citecolor=blue!50!black
+}
+
+\title{Declarative Provisioning of Synrc VE\\
+       with Terraform and Packer}
+\author{Synrc Hypervision Research}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+This paper presents a fully declarative architecture for provisioning and managing the Synrc Virtualization Environment (Synrc VE / OS.1) using the HashiCorp stack. Building upon the seL4-based Synrc Hypervision~\cite{hv}, we show how Packer produces reproducible golden images for both conventional guests and high-assurance unikernels, while Terraform orchestrates their lifecycle on Proxmox VE and integrates with Kubernetes-compatible control planes. The approach yields a single source of truth in Git, strong auditability, and minimal trusted computing base suitable for high-assurance and public-sector deployments.
+\end{abstract}
+
+\tableofcontents
+\newpage
+
+%==============================================================================
+\section{Introduction (Functional Declaration)}
+%==============================================================================
+
+Modern infrastructure demands both strong isolation guarantees and operational simplicity. The Synrc Hypervision project~\cite{hv} addresses the former by hosting an unmodified Erlang/OTP BEAM runtime inside a formally verified seL4 Microkit protection domain, while confining device drivers to a minimal Alpine Linux guest. Communication occurs exclusively through capability-mediated shared-memory channels (sDDF / VirtIO).
+
+The resulting system dramatically reduces the Trusted Computing Base (TCB) compared with conventional Linux-based hypervisors, yet retains practical hardware support. Complementary documents describe Proxmox VE integration~\cite{proxmox-md}, a high-assurance orchestration plane (synrc-kube)~\cite{kube-md}, VirtIO architecture~\cite{virtio-md}, and the Chimera-based control plane~\cite{chimera-md}.
+
+Operationalising this architecture at scale, however, requires a declarative, reproducible provisioning layer. Manual creation of LXC containers and QEMU/KVM virtual machines on Proxmox VE, or ad-hoc bootstrap of Kubernetes nodes, quickly becomes error-prone and unauditable.
+
+We therefore declare the following functional requirements:
+
+\begin{enumerate}[leftmargin=*]
+  \item All infrastructure state shall be expressed in HashiCorp Configuration Language (HCL).
+  \item Golden images for operating-system guests and unikernels shall be built reproducibly by Packer.
+  \item Terraform shall be the sole tool that creates, updates and destroys resources on Proxmox VE.
+  \item Secrets (Proxmox API tokens, SSH keys, kubeconfig material) shall reside in HashiCorp Vault.
+  \item The entire definition shall live in a single Git repository, enabling review, audit and deterministic recreation of any environment.
+\end{enumerate}
+
+\newpage
+The resulting repository layout is:
+
+
+\begin{verbatim}
++--- Packer (image construction)
+|   +-- base-os.pkr.hcl
+|   +-- k8s-node.pkr.hcl
+|   +-- guest-netbsd.pkr.hcl
+|   +-- guest-alpine.pkr.hcl
+|   +-- guest-freebsd.pkr.hcl
+|   +-- unikernel-beam.pkr.hcl
+|   +-- unikernel-jvm.pkr.hcl
+|   +-- unikernel-clr.pkr.hcl
+|   +-- cow-node.pkr.hcl          # Proxmox qcow2 templates
+|   +-- podman-host.pkr.hcl
++--  Terraform
+|   +-- modules/proxmox/          # VMs, LXC, networks, storage
+|   +-- modules/kubernetes/       # node provisioning & bootstrap
+|   +-- environments/             # dev / stage / prod
++-- Vault                         # secrets, tokens, kubeconfig
+\end{verbatim}
+
+This paper describes how the above declaration is realised.
+
+%==============================================================================
+\section{Terraform for Synrc VE}
+%==============================================================================
+
+Terraform acts as the declarative orchestrator of the Synrc Virtualization Environment. It never builds images; it only consumes Packer-produced artefacts that have been registered as Proxmox templates or LXC ostemplates.
+
+\subsection{Kubernetes and Proxmox VE Support}
+
+Proxmox VE is the primary target hypervisor for AMD64 deployments (VirtIO / KVM). Terraform uses the \texttt{bpg/proxmox} provider to manage:
+
+\begin{itemize}
+  \item Virtual machines that host seL4 + Synrc BEAM unikernels,
+  \item LXC containers that run Alpine-based Erlang micro-services (LDAP, CA, KVS, VPN, IAS) as described in PROXMOX.md,
+  \item Conventional Kubernetes worker and control-plane nodes (when a hybrid cluster is required),
+  \item Software-defined networks, firewall rules and storage volumes.
+\end{itemize}
+
+Kubernetes support is realised in two complementary ways:
+
+\begin{enumerate}
+  \item \textbf{Classical path} --- Terraform provisions Ubuntu/Alpine VMs from the \texttt{k8s-node} Packer image; a subsequent provisioner or external GitOps controller bootstraps kubeadm / RKE2 / k3s with CRI-O or containerd. Rootless Podman is available on the same nodes for system services and \texttt{podman kube play} compatibility.
+  \item \textbf{High-assurance path (synrc-kube)} --- Terraform instantiates seL4-based unikernel VMs. The control-plane services (KVS replacing etcd, Name Service, Certificate Authority, Identity) run as isolated BEAM protection domains. OCI images are reinterpreted as seL4 guest descriptors rather than Linux containers~\cite{kube-md}.
+\end{enumerate}
+
+Both paths share the same Terraform modules; only the chosen Packer template identifier changes.
+
+\subsection{Supported Operating Systems}
+
+The Synrc bootloader and system descriptions support a range of guests that can be selected at deployment time:
+
+\begin{center}
+\begin{tabular}{lp{7.5cm}}
+\toprule
+\textbf{Guest} & \textbf{Role} \\
+\midrule
+Alpine Linux (musl) & Primary driver domain and LXC micro-services \\
+NetBSD              & Alternative System-plane flavour, rump-kernel guests \\
+FreeBSD             & Full BSD userland guest / rump compatibility \\
+Chimera Linux       & Preferred control-plane OS (musl + FreeBSD userland) \\
+Ubuntu / Debian     & Conventional Kubernetes nodes (when required) \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Additional embedded targets (NuttX, LK, BTRON) are recognised by the bootloader but are outside the scope of the present Terraform modules.
+
+\subsection{Supported Unikernels (BEAM, JVM, CLR)}
+
+\begin{description}
+  \item[BEAM (Erlang/OTP)] The primary and fully implemented unikernel. An unmodified Ericsson BEAM is linked against the Synrc syscall provider ($\approx$\,1\,kLOC) and executes as an seL4 protection domain. Device I/O is performed via VirtIO front-ends backed by a capability-isolated host domain that owns the physical NVMe controller~\cite{virtio-md}.
+  \item[JVM] Target unikernel. Packer produces a minimal image containing a statically linked GraalVM native-image or a stripped OpenJDK runtime together with a thin Synrc-compatible syscall layer. Lifecycle management is identical to BEAM instances.
+  \item[CLR (.NET)] Target unikernel. Analogous packaging of a CoreCLR / NativeAOT runtime. Both JVM and CLR images are registered as Proxmox templates and instantiated by the same Terraform resources used for BEAM.
+\end{description}
+
+All unikernels share the same VirtIO transport and capability model; only the application runtime binary differs.
+
+\subsection{Declarations (OS and Unikernels)}
+
+A typical Terraform declaration for a high-assurance BEAM unikernel on Proxmox VE looks as follows:
+
+\begin{verbatim}
+resource "proxmox_virtual_environment_vm" "beam_unikernel" {
+  name      = "hv-beam-01"
+  node_name = "pve01"
+  vm_id     = 9100
+  clone {
+    vm_id = var.unikernel_beam_template_id   # produced by Packer
+    full  = true
+  }
+  cpu {
+    cores = 2
+    type  = "host"
+  }
+  memory {
+    dedicated = 4096
+  }
+  disk {
+    datastore_id = "local-lvm"
+    interface    = "virtio0"
+    size         = 20
+    file_format  = "qcow2"
+  }
+  network_device {
+    bridge = "vmbr0"
+    model  = "virtio"
+  }
+  initialization {
+    # cloud-init or direct kernel cmdline for seL4
+    user_account {
+      username = "synrc"
+      keys     = [file(var.ssh_public_key)]
+    }
+  }
+}
+\end{verbatim}
+
+LXC-based micro-services are declared with the corresponding container resource and an Alpine ostemplate previously exported by Packer. Kubernetes nodes are declared identically, differing only in the template identifier and subsequent bootstrap provisioners.
+
+Environment-specific values (template IDs, network CIDRs, resource sizes) are supplied via \texttt{tfvars} files under \texttt{environments/}, keeping the modules themselves pure and reusable.
+
+%==============================================================================
+\section{Conclusion}
+%==============================================================================
+
+By treating Packer as the sole image factory and Terraform as the sole infrastructure orchestrator, the Synrc Virtualization Environment obtains a completely declarative, Git-centric lifecycle. The same HCL definitions can instantiate:
+
+\begin{itemize}
+  \item classical Kubernetes clusters on Proxmox VE with rootless Podman,
+  \item high-assurance seL4 + BEAM (and future JVM/CLR) unikernels,
+  \item supporting Alpine/NetBSD/FreeBSD guests and Erlang micro-services.
+\end{itemize}
+
+The approach preserves the formal isolation properties of seL4 while giving operators the familiar plan/apply workflow, audit trail and multi-environment consistency required in regulated and public-sector settings. Future work includes native Terraform providers for synrc-kube control-plane objects and tighter Vault integration for capability tokens.
+
+\begin{thebibliography}{9}
+\bibitem{hv}
+N.~Tonpa, \emph{Synrc Hypervision}, \url{https://github.com/synrc/hv}, 2026.
+
+\bibitem{proxmox-md}
+N.~Tonpa, \emph{Unikernel Deployments on Proxmox VE}, PROXMOX.md, 2026.
+
+\bibitem{kube-md}
+N.~Tonpa, \emph{Kubernetes Deployments / synrc-kube}, KUBE.md, 2026.
+
+\bibitem{virtio-md}
+N.~Tonpa, \emph{VirtIO Architecture}, VIRTIO.md, 2026.
+
+\bibitem{chimera-md}
+N.~Tonpa, \emph{Control Plane (Chimera)}, CHIMERA.md, 2026.
+\end{thebibliography}
+
+\end{document}
